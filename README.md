@@ -15,3 +15,12 @@ Hospitals and healthcare organizations may face situations where community suppo
 For blood donation specifically, hospitals may need particular blood types within a certain period, while potential donors may not easily know where or when their blood type is needed.
 
 Healthcare Support System aims to provide a centralized platform where healthcare organizations can publish their support needs and community members can find suitable opportunities and respond through an organized process.
+
+
+## Project Purpose
+
+The purpose of Healthcare Support System is to create a secure and organized platform that makes it easier for individuals to support healthcare organizations.
+
+In the first version, the system focuses on improving the blood donation process by allowing hospitals to publish blood requests and donors to discover these requests and book suitable donation appointments.
+
+The project also aims to provide a strong foundation that can be expanded in the future to support additional healthcare and volunteering services.
