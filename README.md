@@ -24,3 +24,17 @@ The purpose of Healthcare Support System is to create a secure and organized pla
 In the first version, the system focuses on improving the blood donation process by allowing hospitals to publish blood requests and donors to discover these requests and book suitable donation appointments.
 
 The project also aims to provide a strong foundation that can be expanded in the future to support additional healthcare and volunteering services.
+
+
+## Target Users and Roles
+
+The Healthcare Support System supports three main user roles:
+
+### Donor
+A donor is a registered user who wants to support healthcare organizations through blood donation. Donors can manage their profiles, view available blood requests, search for suitable requests, and book or cancel donation appointments.
+
+### Hospital Staff
+Hospital staff are authorized users associated with a hospital or healthcare organization. They can create and manage blood requests, view donation bookings, and update booking statuses.
+
+### Admin
+The admin manages the overall platform. Admins can manage users and hospitals, deactivate accounts when necessary, and monitor the system.
