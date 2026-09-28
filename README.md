@@ -54,3 +54,11 @@ The first version of the Healthcare Support System focuses on blood donation sup
 - Blood request creation and management.
 - Search and filtering of blood requests.
 - Donation appointment booking.
+- Booking availability management.
+- Prevention of conflicting or duplicate bookings.
+- Booking cancellation and status updates.
+- Email notifications.
+- Real-time booking notifications.
+- Soft deletion and account deactivation.
+- Secure REST API using JWT authentication.
+- API documentation using Swagger/OpenAPI.
