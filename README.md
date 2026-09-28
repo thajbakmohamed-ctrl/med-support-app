@@ -62,3 +62,18 @@ The first version of the Healthcare Support System focuses on blood donation sup
 - Soft deletion and account deactivation.
 - Secure REST API using JWT authentication.
 - API documentation using Swagger/OpenAPI.
+
+### Out of Scope for Version 1
+
+The following features are planned for future versions:
+
+- Medical equipment donation and lending.
+- Patient companion services.
+- Transportation assistance.
+- Translation and digital assistance.
+- General healthcare volunteering opportunities.
+- Volunteer hour tracking and certificates.
+- Mobile application.
+- SMS notifications.
+- Map and location services.
+- Advanced analytics and dashboards.
