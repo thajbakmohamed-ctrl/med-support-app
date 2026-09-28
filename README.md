@@ -38,3 +38,19 @@ Hospital staff are authorized users associated with a hospital or healthcare org
 
 ### Admin
 The admin manages the overall platform. Admins can manage users and hospitals, deactivate accounts when necessary, and monitor the system.
+
+## Version 1 Scope
+
+The first version of the Healthcare Support System focuses on blood donation support and appointment booking.
+
+### In Scope
+
+- User registration and secure login.
+- Email verification.
+- Role-based access for Donors, Hospital Staff, and Admins.
+- User and donor profile management.
+- Profile picture and CPR image upload.
+- Hospital management.
+- Blood request creation and management.
+- Search and filtering of blood requests.
+- Donation appointment booking.
