@@ -83,3 +83,53 @@ The following features are planned for future versions:
 The following Entity Relationship Diagram represents the database design for the Healthcare Support System.
 
 ![Healthcare Support System ERD](docs/healthcare-support-erd.png)
+
+## Project Architecture
+
+The Healthcare Support System follows a layered backend architecture using Java and Spring Boot.
+
+The project is organized into the following packages:
+
+- **controller** - Handles HTTP requests and REST API endpoints.
+- **service** - Contains business logic and system rules.
+- **repository** - Handles database operations using Spring Data JPA.
+- **model** - Contains the system entities and database models.
+- **dataTransferObject** - Contains request and response objects used to transfer data between the client and the application.
+- **security** - Handles authentication, authorization, and JWT security.
+- **exception** - Handles custom exceptions and global error handling.
+- **config** - Contains application and security configuration.
+
+### Package Structure
+
+```text
+com.ga.healthcaresupport
+│
+├── controller
+├── service
+├── repository
+├── model
+├── dataTransferObject
+│   ├── request
+│   └── response
+├── security
+├── exception
+└── config
+
+
+### Application Flow
+
+```text
+Client / Postman
+        ↓
+Controller
+        ↓
+Data Transfer Object + Validation
+        ↓
+Service
+        ↓
+Business Rules
+        ↓
+Repository
+        ↓
+PostgreSQL
+```
