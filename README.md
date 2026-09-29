@@ -80,6 +80,6 @@ The following features are planned for future versions:
 
 ## Database ERD
 
-The following Entity Relationship Diagram represents the initial database design for the Healthcare Support System.
+The following Entity Relationship Diagram represents the database design for the Healthcare Support System.
 
 ![Healthcare Support System ERD](docs/healthcare-support-erd.png)
