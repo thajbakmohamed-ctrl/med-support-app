@@ -77,3 +77,9 @@ The following features are planned for future versions:
 - SMS notifications.
 - Map and location services.
 - Advanced analytics and dashboards.
+
+## Database ERD
+
+The following Entity Relationship Diagram represents the initial database design for the Healthcare Support System.
+
+![Healthcare Support System ERD](docs/healthcare-support-erd.png)
