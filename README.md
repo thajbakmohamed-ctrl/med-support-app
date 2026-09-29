@@ -114,7 +114,7 @@ com.ga.healthcaresupport
 ├── security
 ├── exception
 └── config
-
+```
 
 ### Application Flow
 
@@ -133,3 +133,156 @@ Repository
         ↓
 PostgreSQL
 ```
+## REST API Endpoints
+
+## AUTHENTICATION
+
+POST /auth/register
+→ Register a new user
+
+POST /auth/login
+→ Login and receive JWT token
+
+GET /auth/verify-email
+→ Verify user's email
+
+POST /auth/forgot-password
+→ Request password reset email
+
+POST /auth/reset-password
+→ Reset forgotten password
+
+
+
+## USER PROFILE
+
+GET /api/users/profile
+→ View my profile
+
+PUT /api/users/profile
+→ Update my profile
+
+PUT /api/users/profile/image
+→ Upload or update profile picture
+
+PUT /api/users/change-password
+→ Change password while logged in
+
+
+## DONOR PROFILE
+
+
+POST /api/donors/profile
+→ Create donor profile
+
+GET /api/donors/profile
+→ View my donor profile
+
+PUT /api/donors/profile
+→ Update my donor profile
+
+PUT /api/donors/profile/cpr-image
+→ Upload or update CPR image
+
+
+
+## HOSPITALS
+
+
+GET /api/hospitals
+→ View active hospitals
+
+GET /api/hospitals/{hospitalId}
+→ View one hospital
+
+POST /api/hospitals
+→ Create hospital
+→ ADMIN only
+
+PUT /api/hospitals/{hospitalId}
+→ Update hospital
+→ ADMIN only
+
+DELETE /api/hospitals/{hospitalId}
+→ Soft delete / deactivate hospital
+→ ADMIN only
+
+
+
+## BLOOD REQUESTS
+
+
+GET /api/blood-requests
+→ View blood requests
+
+GET /api/blood-requests/{requestId}
+→ View one blood request
+
+POST /api/blood-requests
+→ Create blood request
+→ HOSPITAL_STAFF only
+
+PUT /api/blood-requests/{requestId}
+→ Update blood request
+→ HOSPITAL_STAFF only
+
+PUT /api/blood-requests/{requestId}/status
+→ Update request status
+→ HOSPITAL_STAFF only
+
+
+Filtering examples:
+
+GET /api/blood-requests?bloodType=O+
+GET /api/blood-requests?urgency=URGENT
+GET /api/blood-requests?status=OPEN
+
+
+
+## DONOR BOOKINGS
+
+POST /api/blood-requests/{requestId}/bookings
+→ Create donation booking
+
+GET /api/donors/bookings
+→ View my bookings
+
+GET /api/donors/bookings/{bookingId}
+→ View one of my bookings
+
+PUT /api/donors/bookings/{bookingId}/cancel
+→ Cancel my booking
+
+
+
+## HOSPITAL STAFF BOOKINGS
+
+
+GET /api/hospital/bookings
+→ View bookings for my hospital
+
+GET /api/hospital/bookings?status=PENDING
+→ Filter hospital bookings by status
+
+PUT /api/hospital/bookings/{bookingId}/confirm
+→ Confirm donation booking
+
+PUT /api/hospital/bookings/{bookingId}/complete
+→ Mark donation booking as completed
+
+
+
+## ADMIN
+
+
+GET /api/admin/users
+→ View all users
+
+GET /api/admin/users/{userId}
+→ View one user
+
+DELETE /api/admin/users/{userId}
+→ Soft delete / deactivate user
+
+PUT /api/admin/users/{userId}/activate
+→ Reactivate user
