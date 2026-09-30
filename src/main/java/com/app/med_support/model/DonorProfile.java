@@ -22,20 +22,19 @@ public class DonorProfile {
     // Links the donor profile to one user --
     // the  relationship between donor profile and user is one to one
     @OneToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-
-    @Column(name = "blood_type")
+    @Column(name = "blood_type", nullable = false)
     private String bloodType;
 
-    @Column(name = "date_of_birth")
+    @Column(name = "date_of_birth", nullable = false)
     private LocalDate dateOfBirth;
 
-    @Column(name = "gender")
+    @Column(name = "gender", nullable = false)
     private String gender;
 
-    @Column(name = "weight_kg")
+    @Column(name = "weight_kg", nullable = false)
     private Double weightKg;
 
     // Stores the donors medical conditions
@@ -53,16 +52,17 @@ public class DonorProfile {
     @Column(name = "last_donation_date")
     private LocalDate lastDonationDate;
 
-    @Column(name = "total_donations")
+    @Column(name = "total_donations", nullable = false)
     private Integer totalDonations;
 
     // Storing the path or url of the donors (cpr image)
-    @Column(name = "cpr_image")
+    @Column(name = "cpr_image", nullable = false)
     private String cprImage;
 
 
-    @Column(name = "is_available")
+    @Column(name = "is_available", nullable = false)
     private boolean isAvailableForBloodDonation;
+
 
     // Stores additional notes about the donor
     @Column(name = "notes")

@@ -19,25 +19,25 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "name")
+    @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "email", unique = true)
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
 
-    @Column(name = "password_hash")
+    @Column(name = "password_hash", nullable = false)
     private String hashedPassword;
 
-    @Column(name = "phone")
+    @Column(name = "phone", nullable = false)
     private String phoneNumber;
 
-    @Column(name = "role")
+    @Column(name = "role", nullable = false)
     private String role;
 
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private String status;
 
-    @Column(name = "email_verified")
+    @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
 
     @Column(name = "profile_image")
