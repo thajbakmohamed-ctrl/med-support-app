@@ -5,6 +5,7 @@ import com.app.med_support.model.User;
 import com.app.med_support.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import com.app.med_support.request.RegisterRequest;
 
 import java.util.List;
 
@@ -12,10 +13,50 @@ import java.util.List;
 public class UserService {
     // USER SERVICES WILL NEED REPOSITORY TO DEALS WITH USERS DATA
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+    //  give me the registertion data and the service will do the account
+    public User registerUser(RegisterRequest registerRequest) {
+        if(userRepository.existsByEmail(registerRequest.getEmail())) {
+            return null;
+        }
+        // this if statment -- the reg is only for donor and hospital staff
+        if (!registerRequest.getRole().equals("DONOR")
+                && !registerRequest.getRole().equals("HOSPITAL_STAFF")) {
+            return null;
+        }
+        //RegisterRequest.name        -->  User.name
+        //RegisterRequest.email       -->  User.email
+        //RegisterRequest.phoneNumber --> User.phoneNumber
+        //RegisterRequest.role        -->  User.role
+
+
+        //for example
+        // REGISTER REQUEST                 USER ENTITY
+
+        // name = "Thajba"      ->  name = "Thajba"
+
+        // email = "t@x.com"    ->  email = "t@x.com"
+
+        //phone = "3333"       ->  phone = "3333"
+
+        //role = "DONOR"       ->  role = "DONOR"
+
+        //password = "1234"    ->  we need to hash the pass now
+        User user = new User();
+        user.setName(registerRequest.getName());
+        user.setEmail(registerRequest.getEmail());
+        user.setPhoneNumber(registerRequest.getPhoneNumber());
+        user.setRole(registerRequest.getRole());
+        user.setHashedPassword(passwordEncoder.encode(registerRequest.getPassword()));
+        user.setStatus("ACTIVE");
+        user.setEmailVerified(false);
+        return userRepository.save(user);
     }
     public List<User> getAllUsers() {
         return userRepository.findAll();
