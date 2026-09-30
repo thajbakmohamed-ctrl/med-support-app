@@ -19,19 +19,19 @@ public class Hospital {
     private Long id;
 
 
-    @Column(name = "name")
+    @Column(name = "name", nullable = false)
     private String hospitalName;
 
-    @Column(name = "location")
+    @Column(name = "location", nullable = false)
     private String hospitalLocation;
 
-    @Column(name = "phone")
+    @Column(name = "phone", nullable = false)
     private String hospitalPhone;
 
     @Column(name = "description")
     private String hospitalDescription;
 
-    @Column(name = "is_active")
+    @Column(name = "is_active", nullable = false)
     private boolean hospitalActive;
 
     @CreationTimestamp

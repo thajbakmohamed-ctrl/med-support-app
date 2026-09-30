@@ -25,20 +25,20 @@ public class BloodRequest {
     private Hospital hospital;
 
 
-    @Column(name = "blood_type")
+    @Column(name = "blood_type", nullable = false)
     private String requiredBloodType;
 
 
-    @Column(name = "units_needed")
+    @Column(name = "units_needed", nullable = false)
     private Integer requiredBloodUnits;
 
-    @Column(name = "urgency")
+    @Column(name = "urgency", nullable = false)
     private String bloodRequestUrgency;
 
-    @Column(name = "needed_date")
+    @Column(name = "needed_date", nullable = false)
     private LocalDate bloodNeededDate;
 
-    @Column(name = "status")
+    @Column(name = "status", nullable = false)
     private String bloodRequestStatus;
 
     @Column(name = "description")

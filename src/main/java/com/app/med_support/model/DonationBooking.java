@@ -22,19 +22,19 @@ public class DonationBooking {
 
     // -Many donation - bookings can belong to - one donor profile-
     @ManyToOne
-    @JoinColumn(name = "donor_profile_id")
+    @JoinColumn(name = "donor_profile_id", nullable = false)
     private DonorProfile donorProfile;
 
     //- Many donation - bookings can belong to -one blood request-
     @ManyToOne
-    @JoinColumn(name = "blood_request_id")
+    @JoinColumn(name = "blood_request_id", nullable = false)
     private BloodRequest bloodRequest;
 
 
-    @Column(name = "booking_date")
+    @Column(name = "booking_date", nullable = false)
     private LocalDate donationBookingDate;
 
-    @Column(name = "booking_time")
+    @Column(name = "booking_time", nullable = false)
     private LocalTime donationBookingTime;
 
     //(the hospital staff will change the donation status )
@@ -43,7 +43,7 @@ public class DonationBooking {
     //CONFIRMED - after the hospital staff confirm the booking will be confirmed
     //COMPLETED - the donor attend and the donation is complated
     //CANCELLED - the donor canceled the booking
-     @Column(name = "status")
+     @Column(name = "status", nullable = false)
      private String donationBookingStatus;
 
     // Stores additional notes about the donation booking
