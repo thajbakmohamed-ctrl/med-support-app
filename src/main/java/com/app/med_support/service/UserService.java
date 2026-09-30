@@ -3,6 +3,7 @@ package com.app.med_support.service;
 import com.app.med_support.model.Hospital;
 import com.app.med_support.model.User;
 import com.app.med_support.repository.UserRepository;
+import com.app.med_support.request.LoginRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.app.med_support.request.RegisterRequest;
@@ -57,6 +58,16 @@ public class UserService {
         user.setStatus("ACTIVE");
         user.setEmailVerified(false);
         return userRepository.save(user);
+    }
+    public User loginUser(LoginRequest loginRequest) {
+        User user = userRepository.findByEmail(loginRequest.getEmail());
+        if (user == null) {
+            return null;
+        }
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getHashedPassword())) {
+            return null;
+        }
+        return user;
     }
     public List<User> getAllUsers() {
         return userRepository.findAll();

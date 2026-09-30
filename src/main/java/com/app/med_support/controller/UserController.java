@@ -1,6 +1,7 @@
 package com.app.med_support.controller;
 
 import com.app.med_support.model.User;
+import com.app.med_support.request.LoginRequest;
 import com.app.med_support.request.RegisterRequest;
 import com.app.med_support.service.UserService;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,10 @@ public class UserController {
     @PostMapping("/register")
     public User registerUser(@RequestBody RegisterRequest registerRequest) {
         return userService.registerUser(registerRequest);
+    }
+    @PostMapping("/login")
+    public User loginUser(@RequestBody LoginRequest loginRequest) {
+        return userService.loginUser(loginRequest);
     }
 
 }
