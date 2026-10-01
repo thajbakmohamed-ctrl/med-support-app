@@ -5,10 +5,7 @@ import com.app.med_support.request.LoginRequest;
 import com.app.med_support.request.RegisterRequest;
 import com.app.med_support.response.AuthResponse;
 import com.app.med_support.service.UserService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RequestMapping("/api/auth")
 @RestController
@@ -34,6 +31,14 @@ public class UserController {
             return new AuthResponse("Login failed");
         }
         return new AuthResponse("Login successful");
+    }
+    @GetMapping("/verify-email")
+    public AuthResponse verifyEmail(@RequestParam String token) {
+        boolean verified = userService.verifyEmail(token);
+        if (!verified) {
+            return new AuthResponse("Verification link is invalid or expired");
+        }
+        return new AuthResponse("Email verified successfully");
     }
 
 }

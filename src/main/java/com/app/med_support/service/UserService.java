@@ -4,23 +4,32 @@ import com.app.med_support.model.Hospital;
 import com.app.med_support.model.User;
 import com.app.med_support.repository.UserRepository;
 import com.app.med_support.request.LoginRequest;
+import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import com.app.med_support.request.RegisterRequest;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class UserService {
     // USER SERVICES WILL NEED REPOSITORY TO DEALS WITH USERS DATA
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
 
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailService = emailService;
     }
+    private String generateVerificationToken() {
+        return UUID.randomUUID().toString();
+    }
+    @Transactional
     //  give me the registertion data and the service will do the account
     public User registerUser(RegisterRequest registerRequest) {
         if(userRepository.existsByEmail(registerRequest.getEmail())) {
@@ -56,8 +65,32 @@ public class UserService {
         user.setRole(registerRequest.getRole());
         user.setHashedPassword(passwordEncoder.encode(registerRequest.getPassword()));
         user.setStatus("ACTIVE");
+        // the flow for the verification is
+        // to generate a unique verification token for the new user
+        //set the vir link expiry 1d
+        // save the user with the token also the expiry date
+        //create a ver link using the saved user token
+        //send the verification link to thr user email
         user.setEmailVerified(false);
-        return userRepository.save(user);
+        user.setVerificationToken(generateVerificationToken());
+        user.setVerificationTokenExpiry(LocalDateTime.now().plusDays(1));
+        User savedUser = userRepository.save(user);
+        String verificationLink = "http://localhost:8080/api/auth/verify-email?token="
+        + savedUser.getVerificationToken();
+        emailService.sendVerificationEmail(savedUser.getEmail(), verificationLink);
+        return savedUser;
+    }
+    public boolean verifyEmail(String verificationToken) {
+        User user = userRepository.findByVerificationToken(verificationToken);
+        if(user == null) {
+            return false;
+        }
+        if(user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        return true;
     }
     public User loginUser(LoginRequest loginRequest) {
         User user = userRepository.findByEmail(loginRequest.getEmail());
