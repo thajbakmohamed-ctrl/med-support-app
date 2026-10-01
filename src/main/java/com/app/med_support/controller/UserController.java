@@ -3,6 +3,7 @@ package com.app.med_support.controller;
 import com.app.med_support.model.User;
 import com.app.med_support.request.LoginRequest;
 import com.app.med_support.request.RegisterRequest;
+import com.app.med_support.response.AuthResponse;
 import com.app.med_support.service.UserService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,12 +20,20 @@ public class UserController {
         this.userService = userService;
     }
     @PostMapping("/register")
-    public User registerUser(@RequestBody RegisterRequest registerRequest) {
-        return userService.registerUser(registerRequest);
+    public AuthResponse registerUser(@RequestBody RegisterRequest registerRequest) {
+        User user = userService.registerUser(registerRequest);
+        if (user == null) {
+            return new AuthResponse("Registration failed");
+        }
+        return new AuthResponse("Registration successful");
     }
     @PostMapping("/login")
-    public User loginUser(@RequestBody LoginRequest loginRequest) {
-        return userService.loginUser(loginRequest);
+    public AuthResponse loginUser(@RequestBody LoginRequest loginRequest) {
+        User user = userService.loginUser(loginRequest);
+        if (user == null) {
+            return new AuthResponse("Login failed");
+        }
+        return new AuthResponse("Login successful");
     }
 
 }
