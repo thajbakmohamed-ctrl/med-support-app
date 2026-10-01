@@ -36,7 +36,7 @@ public class UserService {
             return null;
         }
         // this if statment -- the reg is only for donor and hospital staff
-        if (!registerRequest.getRole().equals("DONOR")
+        if(!registerRequest.getRole().equals("DONOR")
                 && !registerRequest.getRole().equals("HOSPITAL_STAFF")) {
             return null;
         }
@@ -94,10 +94,13 @@ public class UserService {
     }
     public User loginUser(LoginRequest loginRequest) {
         User user = userRepository.findByEmail(loginRequest.getEmail());
-        if (user == null) {
+        if(user == null) {
             return null;
         }
-        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getHashedPassword())) {
+        if(!passwordEncoder.matches(loginRequest.getPassword(), user.getHashedPassword())) {
+            return null;
+        }
+        if(!user.isEmailVerified()) {
             return null;
         }
         return user;
