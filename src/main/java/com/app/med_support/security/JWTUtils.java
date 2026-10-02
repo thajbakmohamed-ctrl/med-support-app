@@ -33,4 +33,15 @@ public class JWTUtils {
         return Jwts.builder().subject(email).issuedAt(now).expiration(expiryDate)
         .signWith(getSigningKey()).compact();
     }
+    public String getEmailFromJwtToken(String token) {
+        // parser -- is for reading the JWT we used a BUILDER to build new JWT
+        //verifywith -- we go back for the signature when we create the JWT we used SINGWITH
+        // BUILD HERE IS FOR AFTER MAKING THE PARSER BULIT IT AND KEEP IT READY TO USE
+        //.parseSignedClaims(token)-- GIVE THE PARSER THE REAL JWT AND VERIFY THAT SIGNATURE IS VALID
+        //GET PAYLOAD-- SHOWS THE USER INFORMATION THAT CONTAINS CLAIMS
+        // GET SUBJECT -- GIVE ME THE CLAIMS FROM THE SUBJECT WE USED THE (EMAIL) IN THE GENERATION SUBJECT
+
+        return Jwts.parser().verifyWith(getSigningKey()).build()
+        .parseSignedClaims(token).getPayload().getSubject();
+    }
 }
