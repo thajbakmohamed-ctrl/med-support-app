@@ -62,5 +62,11 @@ public class User {
     @JoinColumn(name = "hospital_id")
     private Hospital hospital;
 
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @Column(name = "password_reset_token_expiry")
+    private LocalDateTime passwordResetTokenExpiry;
+
 
 }

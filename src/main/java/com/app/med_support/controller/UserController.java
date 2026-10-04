@@ -3,6 +3,7 @@ package com.app.med_support.controller;
 import com.app.med_support.model.User;
 import com.app.med_support.request.LoginRequest;
 import com.app.med_support.request.RegisterRequest;
+import com.app.med_support.request.ResetPasswordRequest;
 import com.app.med_support.response.AuthResponse;
 import com.app.med_support.security.JWTUtils;
 import com.app.med_support.service.UserService;
@@ -48,5 +49,25 @@ public class UserController {
         }
         return new AuthResponse("Email verified successfully");
     }
+    @PostMapping("/forgot-password")
+    public AuthResponse forgotPassword(@RequestParam String email) {
+        System.out.println("FORGOT PASSWORD CONTROLLER REACHED");
+        boolean sent = userService.forgotPassword(email);
+        if(!sent) {
+            return new AuthResponse("Password reset request failed");
+        }
+        return new AuthResponse("Password reset link sent successfully");
+    }
+    @PostMapping("/reset-password")
+    public AuthResponse resetPassword(
+            @RequestBody ResetPasswordRequest resetPasswordRequest) {
+        boolean passwordReset = userService.resetPassword(resetPasswordRequest);
+        if (!passwordReset) {
+            return new AuthResponse("Password reset token is invalid or expired");
+        }
+        return new AuthResponse("Password reset successful");
+
+    }
+
 
 }

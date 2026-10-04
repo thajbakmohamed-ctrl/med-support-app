@@ -24,4 +24,14 @@ public class EmailService {
         verificationLink + "\n\nThis verification link is valid for 24 hours.");
         medSupportEmailSender.send(emailMessageToVerifyEmail);
     }
+    public void sendPasswordResetEmail(String userEmail, String resetLink) {
+        SimpleMailMessage passwordResetEmail = new SimpleMailMessage();
+        passwordResetEmail.setTo(userEmail);
+        passwordResetEmail.setSubject("Reset Your Med Support Account Password");
+        passwordResetEmail.setText("Hello,\n\n" +
+        "We received a request to reset your Med Support account password.\n\n" +
+        "Please click the link below to reset your password:\n\n" + resetLink +
+        "\n\nThis password reset link is valid for 1 hour.");
+        medSupportEmailSender.send(passwordResetEmail);
+    }
 }

@@ -4,6 +4,7 @@ import com.app.med_support.model.Hospital;
 import com.app.med_support.model.User;
 import com.app.med_support.repository.UserRepository;
 import com.app.med_support.request.LoginRequest;
+import com.app.med_support.request.ResetPasswordRequest;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,22 +22,24 @@ public class UserService {
     private final EmailService emailService;
 
 
-    public UserService(UserRepository userRepository,PasswordEncoder passwordEncoder, EmailService emailService) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
+
     private String generateVerificationToken() {
         return UUID.randomUUID().toString();
     }
+
     @Transactional
     //  give me the registertion data and the service will do the account
     public User registerUser(RegisterRequest registerRequest) {
-        if(userRepository.existsByEmail(registerRequest.getEmail())) {
+        if (userRepository.existsByEmail(registerRequest.getEmail())) {
             return null;
         }
         // this if statment -- the reg is only for donor and hospital staff
-        if(!registerRequest.getRole().equals("DONOR")
+        if (!registerRequest.getRole().equals("DONOR")
                 && !registerRequest.getRole().equals("HOSPITAL_STAFF")) {
             return null;
         }
@@ -76,35 +79,38 @@ public class UserService {
         user.setVerificationTokenExpiry(LocalDateTime.now().plusDays(1));
         User savedUser = userRepository.save(user);
         String verificationLink = "http://localhost:8080/api/auth/verify-email?token="
-        + savedUser.getVerificationToken();
+                + savedUser.getVerificationToken();
         emailService.sendVerificationEmail(savedUser.getEmail(), verificationLink);
         return savedUser;
     }
+
     public boolean verifyEmail(String verificationToken) {
         User user = userRepository.findByVerificationToken(verificationToken);
-        if(user == null) {
+        if (user == null) {
             return false;
         }
-        if(user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+        if (user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
             return false;
         }
         user.setEmailVerified(true);
         userRepository.save(user);
         return true;
     }
+
     public User loginUser(LoginRequest loginRequest) {
         User user = userRepository.findByEmail(loginRequest.getEmail());
-        if(user == null) {
+        if (user == null) {
             return null;
         }
-        if(!passwordEncoder.matches(loginRequest.getPassword(), user.getHashedPassword())) {
+        if (!passwordEncoder.matches(loginRequest.getPassword(), user.getHashedPassword())) {
             return null;
         }
-        if(!user.isEmailVerified()) {
+        if (!user.isEmailVerified()) {
             return null;
         }
         return user;
     }
+
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
@@ -121,14 +127,14 @@ public class UserService {
 
 
     public User createUser(User user) {
-        if(userRepository.existsByEmail(user.getEmail())) {
+        if (userRepository.existsByEmail(user.getEmail())) {
             return null;
         }
-        if(!user.getRole().equals("DONOR") &&!user.getRole().equals("HOSPITAL_STAFF")
-                &&!user.getRole().equals("ADMIN")) {
+        if (!user.getRole().equals("DONOR") && !user.getRole().equals("HOSPITAL_STAFF")
+                && !user.getRole().equals("ADMIN")) {
             return null;
         }
-        if(!user.getStatus().equals("ACTIVE") && !user.getStatus().equals("INACTIVE")) {
+        if (!user.getStatus().equals("ACTIVE") && !user.getStatus().equals("INACTIVE")) {
             return null;
         }
         return userRepository.save(user);
@@ -140,7 +146,7 @@ public class UserService {
     // IF EXISTS WE UPDATE THE DATA THAT IS ABLE TO CHANGE -- NEXT SAVE
     public User updateUser(Long userId, User updatedUser) {
         User existingUser = userRepository.findById(userId).orElse(null);
-        if(existingUser == null) {
+        if (existingUser == null) {
             return null;
         }
         existingUser.setName(updatedUser.getName());
@@ -151,7 +157,7 @@ public class UserService {
 
 
     public boolean deleteUser(Long userId) {
-        if(!userRepository.existsById(userId)) {
+        if (!userRepository.existsById(userId)) {
             return false;
         }
         userRepository.deleteById(userId);
@@ -161,10 +167,10 @@ public class UserService {
 
     public User updateUserStatus(Long userId, String status) {
         User existingUser = userRepository.findById(userId).orElse(null);
-        if(existingUser == null) {
+        if (existingUser == null) {
             return null;
         }
-        if(!status.equals("ACTIVE")&&!status.equals("INACTIVE")) {
+        if (!status.equals("ACTIVE") && !status.equals("INACTIVE")) {
             return null;
         }
         existingUser.setStatus(status);
@@ -174,7 +180,7 @@ public class UserService {
 
     public User verifyUserEmail(Long userId) {
         User existingUser = userRepository.findById(userId).orElse(null);
-        if(existingUser == null) {
+        if (existingUser == null) {
             return null;
         }
         existingUser.setEmailVerified(true);
@@ -184,10 +190,10 @@ public class UserService {
 
     public User updateUserRole(Long userId, String role) {
         User existingUser = userRepository.findById(userId).orElse(null);
-        if(existingUser == null) {
+        if (existingUser == null) {
             return null;
         }
-        if(!role.equals("DONOR") && !role.equals("HOSPITAL_STAFF") && !role.equals("ADMIN")) {
+        if (!role.equals("DONOR") && !role.equals("HOSPITAL_STAFF") && !role.equals("ADMIN")) {
             return null;
         }
         existingUser.setRole(role);
@@ -206,14 +212,47 @@ public class UserService {
 
     public User assignHospitalToUser(Long userId, Hospital hospital) {
         User existingUser = userRepository.findById(userId).orElse(null);
-        if(existingUser == null) {
+        if (existingUser == null) {
             return null;
         }
-        if(!existingUser.getRole().equals("HOSPITAL_STAFF")) {
+        if (!existingUser.getRole().equals("HOSPITAL_STAFF")) {
             return null;
         }
         existingUser.setHospital(hospital);
         return userRepository.save(existingUser);
     }
+
+    public boolean forgotPassword(String email) {
+        User user = userRepository.findByEmail(email);
+        if (user == null) {
+            return false;
+        }
+        user.setPasswordResetToken(UUID.randomUUID().toString());
+        user.setPasswordResetTokenExpiry(LocalDateTime.now().plusHours(1));
+        userRepository.save(user);
+        String resetLink =
+                "http://localhost:8080/api/auth/reset-password?token="
+                        + user.getPasswordResetToken();
+        emailService.sendPasswordResetEmail(user.getEmail(), resetLink);
+        return true;
+
+    }
+    public boolean resetPassword(ResetPasswordRequest resetPasswordRequest) {
+        User user = userRepository.findByPasswordResetToken(
+                resetPasswordRequest.getPasswordResetToken());
+        if (user == null) {
+            return false;
+        }
+        if (user.getPasswordResetTokenExpiry().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+        user.setHashedPassword(passwordEncoder.encode(resetPasswordRequest.getNewPassword()));
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+        userRepository.save(user);
+
+        return true;
+    }
+
 }
 
