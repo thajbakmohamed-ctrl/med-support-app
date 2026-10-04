@@ -1,5 +1,7 @@
 package com.app.med_support.security;
 
+import com.app.med_support.model.User;
+import com.app.med_support.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,22 +20,29 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final JWTUtils jwtUtils;
     private final MyUserDetailsService myUserDetailsService;
+    private final UserRepository userRepository;
 
-    public JwtRequestFilter(JWTUtils jwtUtils,MyUserDetailsService myUserDetailsService) {
+    public JwtRequestFilter(JWTUtils jwtUtils,MyUserDetailsService myUserDetailsService, UserRepository userRepository) {
         this.jwtUtils = jwtUtils;
         this.myUserDetailsService = myUserDetailsService;
+        this.userRepository = userRepository;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,FilterChain filterChain)
-    throws ServletException, IOException {String jwt = extractJwtFromRequest(request);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+        String jwt = extractJwtFromRequest(request);
         if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
             String email = jwtUtils.getEmailFromJwtToken(jwt);
+            User user = userRepository.findByEmail(email);
+            if (user != null && "ACTIVE".equals(user.getStatus())) {
             UserDetails userDetails = myUserDetailsService.loadUserByUsername(email);
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken
+                    (userDetails, null, userDetails.getAuthorities());
+             SecurityContextHolder.getContext().setAuthentication(authentication);
+            }
+        }
 
-            SecurityContextHolder.getContext().setAuthentication(authentication);}
         filterChain.doFilter(request, response);
     }
 

@@ -104,6 +104,16 @@ public class UserController {
         }
         return new AuthResponse("CPR document uploaded successfully");
     }
+    @DeleteMapping("/profile")
+    public AuthResponse deleteProfile(Authentication authentication) {
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+        boolean deleted = userService.deleteUser(user.getId());
+        if (!deleted) {
+            return new AuthResponse("Account deactivation failed. Please try again.");
+        }
+        return new AuthResponse("Account deactivated successfully");
+    }
 
 
 }

@@ -110,6 +110,9 @@ public class UserService {
         if (!user.isEmailVerified()) {
             return null;
         }
+        if (!user.getStatus().equals("ACTIVE")) {
+            return null;
+        }
         return user;
     }
 
@@ -158,10 +161,13 @@ public class UserService {
 
 
     public boolean deleteUser(Long userId) {
-        if (!userRepository.existsById(userId)) {
+        User user = userRepository.findById(userId).orElse(null);
+
+        if (user == null) {
             return false;
         }
-        userRepository.deleteById(userId);
+        user.setStatus("INACTIVE");
+        userRepository.save(user);
         return true;
     }
 
