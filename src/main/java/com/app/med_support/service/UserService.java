@@ -3,13 +3,15 @@ package com.app.med_support.service;
 import com.app.med_support.model.Hospital;
 import com.app.med_support.model.User;
 import com.app.med_support.repository.UserRepository;
-import com.app.med_support.request.LoginRequest;
-import com.app.med_support.request.ResetPasswordRequest;
+import com.app.med_support.request.*;
 import jakarta.transaction.Transactional;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.app.med_support.request.RegisterRequest;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -144,14 +146,13 @@ public class UserService {
     // THE FLOW IS ----
     // WE RECEIVED THE USER ID -- WE SEARCH THE ID -- IF NOT  EXISTS (NULL)
     // IF EXISTS WE UPDATE THE DATA THAT IS ABLE TO CHANGE -- NEXT SAVE
-    public User updateUser(Long userId, User updatedUser) {
+    public User updateUser(Long userId, UpdateProfileRequest updateProfileRequest) {
         User existingUser = userRepository.findById(userId).orElse(null);
         if (existingUser == null) {
             return null;
         }
-        existingUser.setName(updatedUser.getName());
-        existingUser.setPhoneNumber(updatedUser.getPhoneNumber());
-        existingUser.setProfileImage(updatedUser.getProfileImage());
+        existingUser.setName(updateProfileRequest.getName());
+        existingUser.setPhoneNumber(updateProfileRequest.getPhoneNumber());
         return userRepository.save(existingUser);
     }
 
@@ -251,6 +252,54 @@ public class UserService {
         user.setPasswordResetTokenExpiry(null);
         userRepository.save(user);
 
+        return true;
+    }
+    public boolean changePassword(Long userId, ChangePasswordRequest changePasswordRequest) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        // we used matches here bec pas in the database is hased we cant compare with equals
+        if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(),
+                user.getHashedPassword())) {
+            return false;
+        }
+        user.setHashedPassword(passwordEncoder.encode(changePasswordRequest.getNewPassword()));
+        userRepository.save(user);
+        return true;
+
+    }
+    public boolean uploadCprDocument(Long userId, MultipartFile cprDocument) {
+        User user = userRepository.findById(userId).orElse(null);
+        if(user == null) {
+            return false;
+        }
+        if(cprDocument == null || cprDocument.isEmpty()) {
+            return false;
+        }
+        String contentType = cprDocument.getContentType();
+        if(!"application/pdf".equals(contentType) && !"image/jpeg".equals(contentType)
+                && !"image/png".equals(contentType)) {
+            return false;
+        }
+        if (cprDocument.getSize() > 5 * 1024 * 1024) {
+            return false;
+        }
+        Path uploadFolder = Paths.get("uploads/cpr");
+        try {
+            Files.createDirectories(uploadFolder);
+        } catch (Exception e) {
+            return false;
+        }
+        String fileName = UUID.randomUUID() + "_" + cprDocument.getOriginalFilename();
+        Path filePath = uploadFolder.resolve(fileName);
+        try {
+            cprDocument.transferTo(filePath);
+        } catch (Exception e) {
+            return false;
+        }
+        user.setCprDocument(filePath.toString());
+        userRepository.save(user);
         return true;
     }
 

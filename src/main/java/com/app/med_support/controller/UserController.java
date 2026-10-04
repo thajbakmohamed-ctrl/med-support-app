@@ -1,14 +1,14 @@
 package com.app.med_support.controller;
 
 import com.app.med_support.model.User;
-import com.app.med_support.request.LoginRequest;
-import com.app.med_support.request.RegisterRequest;
-import com.app.med_support.request.ResetPasswordRequest;
+import com.app.med_support.request.*;
 import com.app.med_support.response.AuthResponse;
 import com.app.med_support.security.JWTUtils;
 import com.app.med_support.service.UserService;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RequestMapping("/api/auth")
 @RestController
@@ -67,6 +67,42 @@ public class UserController {
         }
         return new AuthResponse("Password reset successful");
 
+    }
+    @PutMapping("/change-password")
+    public AuthResponse changePassword(
+            @RequestBody ChangePasswordRequest changePasswordRequest,
+            Authentication authentication) {
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+        boolean passwordChanged = userService.changePassword(
+                user.getId(), changePasswordRequest);
+        if (!passwordChanged) {
+            return new AuthResponse("Password change failed. Please check your current password and try again.");
+        }
+        return new AuthResponse("Password changed successfully");
+
+    }
+    @PutMapping("/profile")
+    public AuthResponse updateProfile(
+            @RequestBody UpdateProfileRequest updateProfileRequest,
+            Authentication authentication) {
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+
+        return new AuthResponse("Profile updated successfully");
+
+    }
+    @PostMapping("/profile/cpr")
+    public AuthResponse uploadCprDocument(
+            @RequestParam("file") MultipartFile cprDocument,
+            Authentication authentication) {
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+        boolean cprUploaded = userService.uploadCprDocument(user.getId(), cprDocument);
+        if (!cprUploaded) {
+        return new AuthResponse("CPR upload failed. Please check the file and try again.");
+        }
+        return new AuthResponse("CPR document uploaded successfully");
     }
 
 

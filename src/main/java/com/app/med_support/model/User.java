@@ -68,5 +68,8 @@ public class User {
     @Column(name = "password_reset_token_expiry")
     private LocalDateTime passwordResetTokenExpiry;
 
+    @Column
+    private String cprDocument;
+
 
 }
