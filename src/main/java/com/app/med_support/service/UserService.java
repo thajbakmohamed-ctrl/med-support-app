@@ -308,6 +308,15 @@ public class UserService {
         userRepository.save(user);
         return true;
     }
+    public boolean reactivateUser(Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return false;
+        }
+        user.setStatus("ACTIVE");
+        userRepository.save(user);
+        return true;
+    }
 
 }
 

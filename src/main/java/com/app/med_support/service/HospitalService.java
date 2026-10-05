@@ -18,5 +18,23 @@ public class HospitalService {
     public List<Hospital> getAllHospitals() {
         return hospitalRepository.findAll();
     }
-
+    //soft delete
+    public boolean deactivateHospital(Long hospitalId) {
+        Hospital hospital = hospitalRepository.findById(hospitalId).orElse(null);
+        if (hospital == null) {
+            return false;
+        }
+        hospital.setHospitalActive(false);
+        hospitalRepository.save(hospital);
+        return true;
+    }
+    public boolean reactivateHospital(Long hospitalId) {
+        Hospital hospital = hospitalRepository.findById(hospitalId).orElse(null);
+        if (hospital == null) {
+            return false;
+        }
+        hospital.setHospitalActive(true);
+        hospitalRepository.save(hospital);
+        return true;
+    }
 }

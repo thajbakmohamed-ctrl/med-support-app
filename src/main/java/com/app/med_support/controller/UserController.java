@@ -4,6 +4,7 @@ import com.app.med_support.model.User;
 import com.app.med_support.request.*;
 import com.app.med_support.response.AuthResponse;
 import com.app.med_support.security.JWTUtils;
+import com.app.med_support.service.AuthService;
 import com.app.med_support.service.UserService;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
@@ -17,15 +18,17 @@ public class UserController {
     //user controller can use user service
     private final UserService userService;
     private final JWTUtils jwtUtils;
+    private final AuthService authService;
 
-    public UserController(UserService userService,JWTUtils jwtUtils) {
+    public UserController(UserService userService, AuthService authService, JWTUtils jwtUtils) {
 
         this.userService = userService;
+        this.authService = authService;
         this.jwtUtils=jwtUtils;
     }
     @PostMapping("/register")
     public AuthResponse registerUser(@RequestBody RegisterRequest registerRequest) {
-        User user = userService.registerUser(registerRequest);
+        User user = authService.registerUser(registerRequest);
         if(user == null) {
             return new AuthResponse("Registration failed");
         }
@@ -33,7 +36,7 @@ public class UserController {
     }
     @PostMapping("/login")
     public AuthResponse loginUser(@RequestBody LoginRequest loginRequest) {
-        User user = userService.loginUser(loginRequest);
+        User user = authService.loginUser(loginRequest);
         if(user == null) {
             return new AuthResponse("Login failed");
         }
@@ -43,7 +46,7 @@ public class UserController {
     }
     @GetMapping("/verify-email")
     public AuthResponse verifyEmail(@RequestParam String token) {
-        boolean verified = userService.verifyEmail(token);
+        boolean verified = authService.verifyEmail(token);
         if(!verified) {
             return new AuthResponse("Verification link is invalid or expired");
         }
@@ -52,7 +55,7 @@ public class UserController {
     @PostMapping("/forgot-password")
     public AuthResponse forgotPassword(@RequestParam String email) {
         System.out.println("FORGOT PASSWORD CONTROLLER REACHED");
-        boolean sent = userService.forgotPassword(email);
+        boolean sent = authService.forgotPassword(email);
         if(!sent) {
             return new AuthResponse("Password reset request failed");
         }
@@ -61,7 +64,7 @@ public class UserController {
     @PostMapping("/reset-password")
     public AuthResponse resetPassword(
             @RequestBody ResetPasswordRequest resetPasswordRequest) {
-        boolean passwordReset = userService.resetPassword(resetPasswordRequest);
+        boolean passwordReset = authService.resetPassword(resetPasswordRequest);
         if (!passwordReset) {
             return new AuthResponse("Password reset token is invalid or expired");
         }
@@ -74,7 +77,7 @@ public class UserController {
             Authentication authentication) {
         String email = authentication.getName();
         User user = userService.getUserByEmail(email);
-        boolean passwordChanged = userService.changePassword(
+        boolean passwordChanged = authService.changePassword(
                 user.getId(), changePasswordRequest);
         if (!passwordChanged) {
             return new AuthResponse("Password change failed. Please check your current password and try again.");
@@ -114,6 +117,7 @@ public class UserController {
         }
         return new AuthResponse("Account deactivated successfully");
     }
+
 
 
 }
