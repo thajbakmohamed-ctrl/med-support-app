@@ -3,119 +3,156 @@ package com.app.med_support.controller;
 import com.app.med_support.model.User;
 import com.app.med_support.request.*;
 import com.app.med_support.response.AuthResponse;
-import com.app.med_support.security.JWTUtils;
-import com.app.med_support.service.AuthService;
 import com.app.med_support.service.UserService;
 import org.springframework.security.core.Authentication;
-import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
-@RequestMapping("/api/auth")
+@RequestMapping("/api/users")
 @RestController
+@Tag(name = "User Profile",
+        description = "APIs for authenticated users to manage their profile," +
+                " upload CPR documents, upload profile images, and deactivate their account.")
 
 public class UserController {
     //user controller can use user service
     private final UserService userService;
-    private final JWTUtils jwtUtils;
-    private final AuthService authService;
 
-    public UserController(UserService userService, AuthService authService, JWTUtils jwtUtils) {
-
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.authService = authService;
-        this.jwtUtils=jwtUtils;
     }
-    @PostMapping("/register")
-    public AuthResponse registerUser(@RequestBody RegisterRequest registerRequest) {
-        User user = authService.registerUser(registerRequest);
-        if(user == null) {
-            return new AuthResponse("Registration failed");
-        }
-        return new AuthResponse("Registration successful");
-    }
-    @PostMapping("/login")
-    public AuthResponse loginUser(@RequestBody LoginRequest loginRequest) {
-        User user = authService.loginUser(loginRequest);
-        if(user == null) {
-            return new AuthResponse("Login failed");
-        }
-        // Generate a JWT token after successful login
-        String token = jwtUtils.generateJwtToken(user.getEmail());
-        return new AuthResponse("Login successful", token);
-    }
-    @GetMapping("/verify-email")
-    public AuthResponse verifyEmail(@RequestParam String token) {
-        boolean verified = authService.verifyEmail(token);
-        if(!verified) {
-            return new AuthResponse("Verification link is invalid or expired");
-        }
-        return new AuthResponse("Email verified successfully");
-    }
-    @PostMapping("/forgot-password")
-    public AuthResponse forgotPassword(@RequestParam String email) {
-        System.out.println("FORGOT PASSWORD CONTROLLER REACHED");
-        boolean sent = authService.forgotPassword(email);
-        if(!sent) {
-            return new AuthResponse("Password reset request failed");
-        }
-        return new AuthResponse("Password reset link sent successfully");
-    }
-    @PostMapping("/reset-password")
-    public AuthResponse resetPassword(
-            @RequestBody ResetPasswordRequest resetPasswordRequest) {
-        boolean passwordReset = authService.resetPassword(resetPasswordRequest);
-        if (!passwordReset) {
-            return new AuthResponse("Password reset token is invalid or expired");
-        }
-        return new AuthResponse("Password reset successful");
 
-    }
-    @PutMapping("/change-password")
-    public AuthResponse changePassword(
-            @RequestBody ChangePasswordRequest changePasswordRequest,
-            Authentication authentication) {
-        String email = authentication.getName();
-        User user = userService.getUserByEmail(email);
-        boolean passwordChanged = authService.changePassword(
-                user.getId(), changePasswordRequest);
-        if (!passwordChanged) {
-            return new AuthResponse("Password change failed. Please check your current password and try again.");
-        }
-        return new AuthResponse("Password changed successfully");
-
-    }
+    @Operation(summary = "Update user profile",
+    description = "Allows an authenticated user to update their own profile information, including name and phone number.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Profile updated successfully"),
+    @ApiResponse(responseCode = "400", description = "Profile update failed because the submitted profile information is invalid"),
+    @ApiResponse(responseCode = "401", description = "Authentication is required or the JWT token is invalid"),
+    @ApiResponse(responseCode = "404", description = "User not found"),
+    @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PutMapping("/profile")
-    public AuthResponse updateProfile(
-            @RequestBody UpdateProfileRequest updateProfileRequest,
+    public ResponseEntity<AuthResponse> updateProfile(@RequestBody UpdateProfileRequest updateProfileRequest,
             Authentication authentication) {
         String email = authentication.getName();
         User user = userService.getUserByEmail(email);
 
-        return new AuthResponse("Profile updated successfully");
+        if(user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(new AuthResponse("User not found"));
+        }
 
+        User updatedUser = userService.updateUser(user.getId(), updateProfileRequest);
+
+        if (updatedUser == null) {return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST).body(new AuthResponse("Profile update failed"));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new AuthResponse("Profile updated successfully"));
     }
+
+
+    // Upload CPR document
+    @Operation(summary = "Upload CPR document",
+    description = "Allows an authenticated user to upload their CPR document. " +
+                    "Accepted file types are PDF, JPEG, and PNG. Maximum file size is 5 MB.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200",
+    description = "CPR document uploaded successfully"),
+    @ApiResponse(responseCode = "400", description = "CPR upload failed because the file is empty, unsupported, or larger than 5 MB"),
+    @ApiResponse(responseCode = "401", description = "Authentication is required or the JWT token is invalid"),
+    @ApiResponse(responseCode = "404", description = "User not found"),
+    @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
     @PostMapping("/profile/cpr")
-    public AuthResponse uploadCprDocument(
-            @RequestParam("file") MultipartFile cprDocument,
+    public ResponseEntity<AuthResponse> uploadCprDocument(@RequestParam("file") MultipartFile cprDocument,
             Authentication authentication) {
         String email = authentication.getName();
         User user = userService.getUserByEmail(email);
-        boolean cprUploaded = userService.uploadCprDocument(user.getId(), cprDocument);
-        if (!cprUploaded) {
-        return new AuthResponse("CPR upload failed. Please check the file and try again.");
+
+        if(user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthResponse("User not found"));
         }
-        return new AuthResponse("CPR document uploaded successfully");
+
+        boolean cprUploaded = userService.uploadCprDocument(user.getId(), cprDocument);
+
+        if(!cprUploaded) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse("CPR upload failed. Please check the file and try again."));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new AuthResponse("CPR document uploaded successfully"));
     }
-    @DeleteMapping("/profile")
-    public AuthResponse deleteProfile(Authentication authentication) {
+    // Upload profile image
+    @Operation(summary = "Upload profile image",
+            description = "Allows an authenticated user to upload a profile image. " +
+                    "Accepted file types are JPEG and PNG. Maximum file size is 5 MB.")
+    @ApiResponses(value = {@ApiResponse(responseCode = "200", description = "Profile image uploaded successfully"),
+    @ApiResponse(responseCode = "400", description = "Profile image upload failed because the file is empty," +
+            " unsupported, or larger than 5 MB"),
+    @ApiResponse(responseCode = "401", description = "Authentication is required or the JWT token is invalid"),
+    @ApiResponse(responseCode = "404", description = "User not found"),
+    @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @PostMapping("/profile/image")
+    public ResponseEntity<AuthResponse> uploadProfileImage(@RequestParam("file") MultipartFile profileImage,
+            Authentication authentication) {
         String email = authentication.getName();
         User user = userService.getUserByEmail(email);
-        boolean deleted = userService.deleteUser(user.getId());
-        if (!deleted) {
-            return new AuthResponse("Account deactivation failed. Please try again.");
+
+        if(user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthResponse("User not found"));
         }
-        return new AuthResponse("Account deactivated successfully");
+
+        boolean imageUploaded = userService.uploadProfileImage(user.getId(), profileImage);
+
+        if (!imageUploaded) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse("Profile image upload failed. Please check the file and try again."));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new AuthResponse("Profile image uploaded successfully"));
+    }
+
+    // Deactivate user account
+    @Operation(summary = "Deactivate user account",
+            description = "Allows an authenticated user to deactivate their own account. " +
+                    "The account is soft deleted by changing its status to INACTIVE instead of permanently deleting it.")
+    @ApiResponses(value = {
+    @ApiResponse(responseCode = "200", description = "Account deactivated successfully"),
+    @ApiResponse(responseCode = "400", description = "Account deactivation failed"),
+    @ApiResponse(responseCode = "401", description = "Authentication is required or the JWT token is invalid"),
+    @ApiResponse(responseCode = "404", description = "User not found"),
+    @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @DeleteMapping("/profile")
+    public ResponseEntity<AuthResponse> deleteProfile(Authentication authentication) {
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+
+        if(user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(new AuthResponse("User not found"));
+        }
+
+        boolean deleted = userService.deleteUser(user.getId());
+
+        if(!deleted) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(new AuthResponse("Account deactivation failed. Please try again."));
+        }
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(new AuthResponse("Account deactivated successfully"));
     }
 
 
