@@ -6,6 +6,7 @@ import com.app.med_support.model.DonorProfile;
 import com.app.med_support.repository.BloodRequestRepository;
 import com.app.med_support.repository.DonationBookingRepository;
 import com.app.med_support.repository.DonorProfileRepository;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -18,14 +19,18 @@ public class DonationBookingService {
     private final DonationBookingRepository donationBookingRepository;
     private final BloodRequestRepository bloodRequestRepository;
     private final DonorProfileRepository donorProfileRepository;
+    private final BookingNotificationService bookingNotificationService;
+
     public DonationBookingService(
             DonationBookingRepository donationBookingRepository,
             BloodRequestRepository bloodRequestRepository,
-            DonorProfileRepository donorProfileRepository) {
+            DonorProfileRepository donorProfileRepository,
+            BookingNotificationService bookingNotificationService) {
 
         this.donationBookingRepository = donationBookingRepository;
         this.bloodRequestRepository = bloodRequestRepository;
         this.donorProfileRepository = donorProfileRepository;
+        this.bookingNotificationService = bookingNotificationService;
     }
 
 
@@ -115,7 +120,11 @@ public class DonationBookingService {
             return null;
         }
         booking.setDonationBookingStatus(newStatus);
-        return donationBookingRepository.save(booking);
+        DonationBooking updatedBooking = donationBookingRepository.save(booking);
+
+        // Send a real-time notification when the booking status changes
+        bookingNotificationService.sendDonationBookingStatusNotification(updatedBooking);
+        return updatedBooking;
     }
 
 
@@ -126,7 +135,18 @@ public class DonationBookingService {
     }
 
 
-    public List<DonationBooking> getBookingsByBloodRequest(Long bloodRequestId) {
+    public List<DonationBooking> getBookingsByBloodRequest(Long bloodRequestId, Long hospitalId) {
+        BloodRequest bloodRequest = bloodRequestRepository.findById(bloodRequestId).orElse(null);
+
+        if (bloodRequest == null) {
+            return List.of();
+        }
+
+        // Hospital staff can only view bookings for their own hospital
+        if (bloodRequest.getHospital() == null
+                || !bloodRequest.getHospital().getId().equals(hospitalId)) {
+            return List.of();
+        }
         return donationBookingRepository.findByBloodRequestId(bloodRequestId);
     }
 
