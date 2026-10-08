@@ -1,6 +1,7 @@
 package com.app.med_support.model;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -25,10 +26,11 @@ public class User {
     @Column(name = "email", unique = true, nullable = false)
     private String email;
 
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String hashedPassword;
 
-    @Column(name = "phone", nullable = false)
+    @Column(name = "phone", nullable = false, unique = true)
     private String phoneNumber;
 
     @Column(name = "role", nullable = false)
@@ -39,6 +41,14 @@ public class User {
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified;
+
+    @JsonIgnore
+    @Column(name = "verification_token")
+    private String verificationToken;
+
+    @JsonIgnore
+    @Column(name = "verification_token_expiry")
+    private LocalDateTime verificationTokenExpiry;
 
     @Column(name = "profile_image")
     private String profileImage;
@@ -55,6 +65,18 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "hospital_id")
     private Hospital hospital;
+
+    @JsonIgnore
+    @Column(name = "password_reset_token")
+    private String passwordResetToken;
+
+    @JsonIgnore
+    @Column(name = "password_reset_token_expiry")
+    private LocalDateTime passwordResetTokenExpiry;
+
+    @JsonIgnore
+    @Column
+    private String cprDocument;
 
 
 }

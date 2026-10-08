@@ -25,7 +25,7 @@ public class Hospital {
     @Column(name = "location", nullable = false)
     private String hospitalLocation;
 
-    @Column(name = "phone", nullable = false)
+    @Column(name = "phone", nullable = false, unique = true)
     private String hospitalPhone;
 
     @Column(name = "description")

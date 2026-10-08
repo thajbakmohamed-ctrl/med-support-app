@@ -1,5 +1,6 @@
 package com.app.med_support.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -56,6 +57,7 @@ public class DonorProfile {
     private Integer totalDonations;
 
     // Storing the path or url of the donors (cpr image)
+    @JsonIgnore
     @Column(name = "cpr_image", nullable = false)
     private String cprImage;
 
