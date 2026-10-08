@@ -3,6 +3,7 @@ package com.app.med_support.service;
 import com.app.med_support.model.BloodRequest;
 import com.app.med_support.model.DonationBooking;
 import com.app.med_support.model.DonorProfile;
+import com.app.med_support.model.User;
 import com.app.med_support.repository.BloodRequestRepository;
 import com.app.med_support.repository.DonationBookingRepository;
 import com.app.med_support.repository.DonorProfileRepository;
@@ -30,13 +31,17 @@ import static org.junit.jupiter.api.Assertions.*;
         @Mock
         private BookingNotificationService bookingNotificationService;
 
+        @Mock
+        private AuditLogService auditLogService;
+
         private DonationBookingService donationBookingService;
 
         @BeforeEach
         void setUp() {MockitoAnnotations.openMocks(this);
 
             donationBookingService = new DonationBookingService(donationBookingRepository,
-                    bloodRequestRepository, donorProfileRepository, bookingNotificationService);
+                    bloodRequestRepository, donorProfileRepository,
+                    bookingNotificationService, auditLogService);
         }
         @Test
         void shouldReturnNullWhenDonorProfileDoesNotExist() {
@@ -196,5 +201,29 @@ import static org.junit.jupiter.api.Assertions.*;
 
             assertNotNull(result);
             assertEquals("PENDING", result.getDonationBookingStatus());
+        }
+        @Test
+        void shouldCancelDonationBookingSuccessfully() {
+
+            DonorProfile donorProfile = new DonorProfile();
+            donorProfile.setId(1L);
+            User user = new User();
+            user.setEmail("donor@test.com");
+
+            donorProfile.setUser(user);
+
+            DonationBooking booking = new DonationBooking();
+            booking.setId(1L);
+            booking.setDonorProfile(donorProfile);
+            booking.setDonationBookingStatus("PENDING");
+
+            when(donationBookingRepository.findById(1L)).thenReturn(java.util.Optional.of(booking));
+
+            when(donationBookingRepository.save(booking)).thenReturn(booking);
+
+            DonationBooking result = donationBookingService.cancelDonationBooking(1L, 1L);
+
+            assertNotNull(result);
+            assertEquals("CANCELLED", result.getDonationBookingStatus());
         }
     }

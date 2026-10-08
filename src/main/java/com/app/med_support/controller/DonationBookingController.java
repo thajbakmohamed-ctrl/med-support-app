@@ -1,5 +1,6 @@
 package com.app.med_support.controller;
 
+import com.app.med_support.model.BloodRequest;
 import com.app.med_support.model.DonationBooking;
 import com.app.med_support.model.DonorProfile;
 import com.app.med_support.model.User;
@@ -10,11 +11,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.app.med_support.request.DonationBookingRequest;
 
 import java.util.List;
 
@@ -29,10 +32,8 @@ public class DonationBookingController {
     private final UserService userService;
     private final DonorProfileRepository donorProfileRepository;
 
-    public DonationBookingController(
-            DonationBookingService donationBookingService,
-            UserService userService,
-            DonorProfileRepository donorProfileRepository) {
+    public DonationBookingController(DonationBookingService donationBookingService,
+            UserService userService, DonorProfileRepository donorProfileRepository) {
 
         this.donationBookingService = donationBookingService;
         this.userService = userService;
@@ -55,7 +56,7 @@ public class DonationBookingController {
     @PreAuthorize("hasRole('DONOR')")
     @PostMapping
     public ResponseEntity<DonationBooking> createDonationBooking(
-            @RequestBody DonationBooking donationBooking,
+            @Valid @RequestBody DonationBookingRequest request,
             Authentication authentication) {
 
         String email = authentication.getName();
@@ -70,8 +71,20 @@ public class DonationBookingController {
         if (donorProfile == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
+        DonationBooking donationBooking = new DonationBooking();
 
         donationBooking.setDonorProfile(donorProfile);
+
+        BloodRequest bloodRequest = new BloodRequest();
+        bloodRequest.setId(request.getBloodRequestId());
+        donationBooking.setBloodRequest(bloodRequest);
+
+        donationBooking.setDonationBookingDate(request.getDonationBookingDate());
+        donationBooking.setDonationBookingTime(request.getDonationBookingTime());
+        donationBooking.setNotesAboutTheDonationBooking(
+                request.getNotesAboutTheDonationBooking()
+        );
+
 
         DonationBooking createdBooking = donationBookingService.createDonationBooking(donationBooking);
 
@@ -165,10 +178,20 @@ public class DonationBookingController {
     @PutMapping("/{bookingId}/status")
     public ResponseEntity<DonationBooking> updateDonationBookingStatus(
             @PathVariable Long bookingId,
-            @RequestParam String newStatus) {
+            @RequestParam String newStatus,
+            Authentication authentication) {
+
+        String email = authentication.getName();
+        User user = userService.getUserByEmail(email);
+
+        if (user == null || user.getHospital() == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        Long hospitalId = user.getHospital().getId();
 
         DonationBooking updatedBooking = donationBookingService.updateDonationBookingStatus(
-                bookingId, newStatus);
+                        bookingId, newStatus, hospitalId);
 
         if (updatedBooking == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

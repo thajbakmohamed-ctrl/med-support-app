@@ -15,7 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import java.util.List;
 
 @RestController
@@ -68,7 +69,7 @@ public class BloodRequestController {
     }
 
 
-    // Get all blood requests
+    // Get all blood requests with pagination and sorting
     @Operation(summary = "Get all blood requests",
             description = "Allows an authenticated ADMIN to view all blood requests with pagination and sorting support.")
     @ApiResponses(value = {
@@ -77,12 +78,21 @@ public class BloodRequestController {
             @ApiResponse(responseCode = "403", description = "Access denied. ADMIN role is required"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping
     public ResponseEntity<Page<BloodRequest>> getAllBloodRequests(
-            Pageable pageable) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "id") String sortBy,
+            @RequestParam(defaultValue = "asc") String direction) {
 
-        Page<BloodRequest> bloodRequests = bloodRequestService.getAllBloodRequests(pageable);
+        Sort sort = direction.equalsIgnoreCase("desc")
+                ? Sort.by(sortBy).descending()
+                : Sort.by(sortBy).ascending();
+
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<BloodRequest> bloodRequests =
+                bloodRequestService.getAllBloodRequests(pageable);
 
         return ResponseEntity.status(HttpStatus.OK).body(bloodRequests);
     }

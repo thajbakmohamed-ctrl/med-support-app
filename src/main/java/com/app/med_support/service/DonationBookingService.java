@@ -6,7 +6,8 @@ import com.app.med_support.model.DonorProfile;
 import com.app.med_support.repository.BloodRequestRepository;
 import com.app.med_support.repository.DonationBookingRepository;
 import com.app.med_support.repository.DonorProfileRepository;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -16,21 +17,25 @@ import java.util.List;
 @Service
 public class DonationBookingService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DonationBookingService.class);
     private final DonationBookingRepository donationBookingRepository;
     private final BloodRequestRepository bloodRequestRepository;
     private final DonorProfileRepository donorProfileRepository;
     private final BookingNotificationService bookingNotificationService;
+    private final AuditLogService auditLogService;
 
     public DonationBookingService(
             DonationBookingRepository donationBookingRepository,
             BloodRequestRepository bloodRequestRepository,
             DonorProfileRepository donorProfileRepository,
-            BookingNotificationService bookingNotificationService) {
+            BookingNotificationService bookingNotificationService,
+            AuditLogService auditLogService) {
 
         this.donationBookingRepository = donationBookingRepository;
         this.bloodRequestRepository = bloodRequestRepository;
         this.donorProfileRepository = donorProfileRepository;
         this.bookingNotificationService = bookingNotificationService;
+        this.auditLogService = auditLogService;
     }
 
 
@@ -46,24 +51,29 @@ public class DonationBookingService {
         if (bloodRequest == null) {
             return null;
         }
+        // Allow booking only when the blood request is open
         if (!bloodRequest.getBloodRequestStatus().equals("OPEN")) {
             return null;
         }
+        // Prevent booking after the blood needed date
         if (donationBooking.getDonationBookingDate() != null
         && donationBooking.getDonationBookingDate()
         .isAfter(bloodRequest.getBloodNeededDate())) {
             return null;
         }
 
+        // Reject booking if the date is missing or in the past
         if (donationBooking.getDonationBookingDate() == null
                 || donationBooking.getDonationBookingDate().isBefore(LocalDate.now())) {
             return null;
         }
 
+        // Reject booking if the booking time is missing
         if (donationBooking.getDonationBookingTime() == null) {
             return null;
         }
 
+        // Prevent booking a past time when the booking date is today
         if (donationBooking.getDonationBookingDate().equals(LocalDate.now())
                 && donationBooking.getDonationBookingTime().isBefore(LocalTime.now())) {
             return null;
@@ -71,7 +81,8 @@ public class DonationBookingService {
         donationBooking.setDonorProfile(donorProfile);
         donationBooking.setBloodRequest(bloodRequest);
 
-        // Prevent double booking unless the previous booking was cancelled
+
+        // Prevent the donor from booking the same date and time twice unless the previous booking was cancelled
         boolean alreadyBooked = donationBookingRepository
         .existsByDonorProfileIdAndDonationBookingDateAndDonationBookingTimeAndDonationBookingStatusNot(
         donorProfileId, donationBooking.getDonationBookingDate(), donationBooking.getDonationBookingTime(),
@@ -81,14 +92,28 @@ public class DonationBookingService {
             return null;
         }
 
+        // Set every new donation booking to pending until it is reviewed
         donationBooking.setDonationBookingStatus("PENDING");
-        return donationBookingRepository.save(donationBooking);
+
+        DonationBooking savedBooking = donationBookingRepository.save(donationBooking);
+
+        logger.info("Donation booking created successfully. Booking ID: {}, Donor Profile ID: {}",
+                savedBooking.getId(), donorProfileId);
+
+        return savedBooking;
     }
 
 
-    public DonationBooking updateDonationBookingStatus(Long bookingId, String newStatus) {
+    public DonationBooking updateDonationBookingStatus(Long bookingId, String newStatus,
+            Long hospitalId) {
         DonationBooking booking = donationBookingRepository.findById(bookingId).orElse(null);
         if (booking == null) {
+            return null;
+        }
+        // Hospital staff can only update bookings belonging to their own hospital
+        if (booking.getBloodRequest() == null
+                || booking.getBloodRequest().getHospital() == null
+                || !booking.getBloodRequest().getHospital().getId().equals(hospitalId)) {
             return null;
         }
         if (newStatus == null) {
@@ -151,21 +176,35 @@ public class DonationBookingService {
     }
 
 
-    // donor canceled their booking
-    public DonationBooking cancelDonationBooking(Long bookingId,Long donorProfileId) {
+    // Donor cancels their own donation booking
+    public DonationBooking cancelDonationBooking(Long bookingId, Long donorProfileId) {
+
         DonationBooking booking = donationBookingRepository.findById(bookingId).orElse(null);
+
         if (booking == null) {
             return null;
         }
+
         if (!booking.getDonorProfile().getId().equals(donorProfileId)) {
             return null;
         }
+
         if (booking.getDonationBookingStatus().equals("COMPLETED")
                 || booking.getDonationBookingStatus().equals("CANCELLED")) {
             return null;
         }
+
         booking.setDonationBookingStatus("CANCELLED");
-        return donationBookingRepository.save(booking);
+
+        DonationBooking cancelledBooking = donationBookingRepository.save(booking);
+
+        auditLogService.saveAuditLog("DONATION_BOOKING_CANCELLED",
+                booking.getDonorProfile().getUser().getEmail(),
+                "Donation booking with ID " + bookingId + " was cancelled by the donor");
+        logger.info("Donation booking cancelled successfully. Booking ID: {}, Donor Profile ID: {}",
+                bookingId, donorProfileId);
+
+        return cancelledBooking;
     }
 
 

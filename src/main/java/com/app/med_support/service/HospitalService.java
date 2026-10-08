@@ -37,4 +37,53 @@ public class HospitalService {
         hospitalRepository.save(hospital);
         return true;
     }
+
+
+    public Hospital getHospitalById(Long hospitalId) {
+
+        return hospitalRepository.findById(hospitalId).orElse(null);
+    }
+    // Create new hospital
+    public Hospital createHospital(Hospital hospital) {
+
+        if (hospital == null) {
+            return null;
+        }
+        // Hospital phone number must contain exactly 8 digits
+        if (hospital.getHospitalPhone() == null
+                || !hospital.getHospitalPhone().matches("\\d{8}")) {
+            return null;
+
+        }
+        // Hospital phone number must be unique
+        if (hospitalRepository.existsByHospitalPhone(hospital.getHospitalPhone())) {
+            return null;
+        }
+        hospital.setHospitalActive(true);
+        return hospitalRepository.save(hospital);
+    }
+    // Update hospital information
+    public Hospital updateHospital(Long hospitalId, Hospital hospitalDetails) {
+        Hospital hospital = hospitalRepository.findById(hospitalId).orElse(null);
+        if (hospital == null) {
+            return null;
+        }
+        // Hospital phone number must contain exactly 8 digits
+        if (hospitalDetails.getHospitalPhone() == null
+                || !hospitalDetails.getHospitalPhone().matches("\\d{8}")) {
+            return null;
+        }
+        // Hospital phone number must be unique if it is changed
+        if (!hospital.getHospitalPhone().equals(hospitalDetails.getHospitalPhone())
+                && hospitalRepository.existsByHospitalPhone(hospitalDetails.getHospitalPhone())) {
+            return null;
+        }
+
+        hospital.setHospitalName(hospitalDetails.getHospitalName());
+        hospital.setHospitalLocation(hospitalDetails.getHospitalLocation());
+        hospital.setHospitalPhone(hospitalDetails.getHospitalPhone());
+        hospital.setHospitalDescription(hospitalDetails.getHospitalDescription());
+        return hospitalRepository.save(hospital);
+    }
+
 }
