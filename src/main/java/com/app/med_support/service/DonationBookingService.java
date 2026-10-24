@@ -14,6 +14,10 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
 
+import com.app.med_support.model.DonationSlot;
+import com.app.med_support.repository.DonationSlotRepository;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class DonationBookingService {
 
@@ -23,26 +27,30 @@ public class DonationBookingService {
     private final DonorProfileRepository donorProfileRepository;
     private final BookingNotificationService bookingNotificationService;
     private final AuditLogService auditLogService;
+    private final DonationSlotRepository donationSlotRepository;
 
     public DonationBookingService(
             DonationBookingRepository donationBookingRepository,
             BloodRequestRepository bloodRequestRepository,
             DonorProfileRepository donorProfileRepository,
             BookingNotificationService bookingNotificationService,
-            AuditLogService auditLogService) {
+            AuditLogService auditLogService, DonationSlotRepository donationSlotRepository) {
 
         this.donationBookingRepository = donationBookingRepository;
         this.bloodRequestRepository = bloodRequestRepository;
         this.donorProfileRepository = donorProfileRepository;
         this.bookingNotificationService = bookingNotificationService;
         this.auditLogService = auditLogService;
+        this.donationSlotRepository = donationSlotRepository;
     }
 
 
-    // no double booking + validation+ create booking
+    @Transactional
     public DonationBooking createDonationBooking(DonationBooking donationBooking) {
         Long donorProfileId = donationBooking.getDonorProfile().getId();
-        DonorProfile donorProfile = donorProfileRepository.findById(donorProfileId).orElse(null);
+
+        DonorProfile donorProfile = donorProfileRepository.findByIdForUpdate(donorProfileId)
+                .orElse(null);
         if (donorProfile == null) {
             return null;
         }
@@ -92,9 +100,47 @@ public class DonationBookingService {
             return null;
         }
 
-        // Set every new donation booking to pending until it is reviewed
-        donationBooking.setDonationBookingStatus("PENDING");
+        if (donationBooking.getDonationSlot() == null || donationBooking.getDonationSlot().getId() == null) {
+            return null;
+        }
 
+        Long slotId = donationBooking.getDonationSlot().getId();
+
+
+        DonationSlot slot = donationSlotRepository.findByIdForUpdate(slotId)
+                .orElse(null);
+
+        if (slot == null) {
+            return null;
+        }
+
+        if (bloodRequest.getHospital() == null || slot.getHospital() == null
+                || !slot.getHospital().getId().equals(bloodRequest.getHospital().getId())) {
+            return null;
+        }
+
+
+        if (!donationBooking.getDonationBookingDate().equals(slot.getSlotDate())) {
+            return null;
+        }
+
+        LocalTime bookingTime = donationBooking.getDonationBookingTime();
+
+        if (bookingTime.isBefore(slot.getStartTime()) || !bookingTime.isBefore(slot.getEndTime())) {
+            return null;
+        }
+
+        if (!"OPEN".equals(slot.getStatus())) {
+            return null;
+        }
+
+        if (slot.getReservedCount() >= slot.getCapacity()) {
+            return null;
+        }
+
+        donationBooking.setDonationSlot(slot);
+        donationBooking.setDonationBookingStatus("PENDING");
+        slot.setReservedCount(slot.getReservedCount() + 1);
         DonationBooking savedBooking = donationBookingRepository.save(donationBooking);
 
         logger.info("Donation booking created successfully. Booking ID: {}, Donor Profile ID: {}",
@@ -103,10 +149,12 @@ public class DonationBookingService {
         return savedBooking;
     }
 
-
+    @Transactional
     public DonationBooking updateDonationBookingStatus(Long bookingId, String newStatus,
             Long hospitalId) {
-        DonationBooking booking = donationBookingRepository.findById(bookingId).orElse(null);
+
+        DonationBooking booking = donationBookingRepository.findByIdForUpdate(bookingId)
+                .orElse(null);
         if (booking == null) {
             return null;
         }
@@ -144,6 +192,22 @@ public class DonationBookingService {
                 || newStatus.equals("CANCELLED"))) {
             return null;
         }
+
+        if ("CANCELLED".equals(newStatus) && booking.getDonationSlot() != null) {
+
+
+            DonationSlot slot = donationSlotRepository
+                    .findByIdForUpdate(booking.getDonationSlot().getId())
+                    .orElseThrow(() -> new IllegalStateException("Donation slot not found"));
+
+
+            if (slot.getReservedCount() <= 0) {
+                throw new IllegalStateException("Cannot release slot because reserved count is zero");
+            }
+
+            // Return one available place
+            slot.setReservedCount(slot.getReservedCount() - 1);
+        }
         booking.setDonationBookingStatus(newStatus);
         DonationBooking updatedBooking = donationBookingRepository.save(booking);
 
@@ -175,11 +239,11 @@ public class DonationBookingService {
         return donationBookingRepository.findByBloodRequestId(bloodRequestId);
     }
 
-
-    // Donor cancels their own donation booking
+    @Transactional
     public DonationBooking cancelDonationBooking(Long bookingId, Long donorProfileId) {
 
-        DonationBooking booking = donationBookingRepository.findById(bookingId).orElse(null);
+        DonationBooking booking = donationBookingRepository.findByIdForUpdate(bookingId)
+                .orElse(null);
 
         if (booking == null) {
             return null;
@@ -192,6 +256,23 @@ public class DonationBookingService {
         if (booking.getDonationBookingStatus().equals("COMPLETED")
                 || booking.getDonationBookingStatus().equals("CANCELLED")) {
             return null;
+        }
+
+        DonationSlot bookingSlot = booking.getDonationSlot();
+
+
+        if (bookingSlot != null) {bookingSlot = donationSlotRepository
+                .findByIdForUpdate(bookingSlot.getId()).orElseThrow(() ->
+                        new IllegalStateException("Donation slot not found"));
+        }
+
+        if (bookingSlot != null) {
+
+            if (bookingSlot.getReservedCount() <= 0) {
+                throw new IllegalStateException("Cannot release slot because reserved count is zero");
+            }
+
+            bookingSlot.setReservedCount(bookingSlot.getReservedCount() - 1);
         }
 
         booking.setDonationBookingStatus("CANCELLED");

@@ -21,4 +21,7 @@ public class DonationBookingRequest {
     private LocalTime donationBookingTime;
 
     private String notesAboutTheDonationBooking;
+
+    @NotNull(message = "Donation slot ID is required")
+    private Long donationSlotId;
 }

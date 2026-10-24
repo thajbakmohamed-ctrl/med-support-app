@@ -18,6 +18,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import com.app.med_support.request.DonationBookingRequest;
+import com.app.med_support.model.DonationSlot;
 
 import java.util.List;
 
@@ -79,11 +80,14 @@ public class DonationBookingController {
         bloodRequest.setId(request.getBloodRequestId());
         donationBooking.setBloodRequest(bloodRequest);
 
+        DonationSlot donationSlot = new DonationSlot();
+        donationSlot.setId(request.getDonationSlotId());
+        donationBooking.setDonationSlot(donationSlot);
+
         donationBooking.setDonationBookingDate(request.getDonationBookingDate());
         donationBooking.setDonationBookingTime(request.getDonationBookingTime());
         donationBooking.setNotesAboutTheDonationBooking(
-                request.getNotesAboutTheDonationBooking()
-        );
+                request.getNotesAboutTheDonationBooking());
 
 
         DonationBooking createdBooking = donationBookingService.createDonationBooking(donationBooking);
