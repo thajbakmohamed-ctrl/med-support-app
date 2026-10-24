@@ -7,6 +7,7 @@ import com.app.med_support.model.DonationBooking;
 import com.app.med_support.repository.DonationBookingRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 public class DonationReminderService {
@@ -50,5 +51,11 @@ public class DonationReminderService {
         reminder.setReminderTime(reminderTime);
 
         return donationReminderRepository.save(reminder);
+    }
+
+    public List<DonationReminder> getPendingReminders() {
+
+        return donationReminderRepository.findByStatusAndReminderTimeLessThanEqual(
+                "PENDING", LocalDateTime.now());
     }
 }
