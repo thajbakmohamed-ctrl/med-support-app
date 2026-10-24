@@ -62,4 +62,21 @@ public class HospitalController {
 
         return ResponseEntity.status(HttpStatus.OK).body(hospital);
     }
+    @Operation(
+            summary = "Search hospitals by name",
+            description = "Searches hospitals using a partial name, ignoring case."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Search completed successfully"),
+            @ApiResponse(responseCode = "401", description = "Authentication is required"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    @GetMapping("/search")
+    public ResponseEntity<List<Hospital>> searchHospitals(
+            @RequestParam String name) {
+
+        List<Hospital> hospitals = hospitalService.searchHospitals(name);
+
+        return ResponseEntity.ok(hospitals);
+    }
 }
