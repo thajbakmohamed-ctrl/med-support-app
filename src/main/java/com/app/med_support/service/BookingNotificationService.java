@@ -6,8 +6,12 @@ import com.app.med_support.model.Notification;
 import com.app.med_support.model.User;
 import com.app.med_support.repository.NotificationRepository;
 import com.app.med_support.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 
@@ -17,6 +21,8 @@ public class BookingNotificationService {
     private final SimpMessagingTemplate messagingTemplate;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(BookingNotificationService.class);
 
     public BookingNotificationService(SimpMessagingTemplate messagingTemplate,
             NotificationRepository notificationRepository,
@@ -29,6 +35,11 @@ public class BookingNotificationService {
 
     // Send a real-time notification when a donation booking status changes
     public void sendDonationBookingStatusNotification(DonationBooking donationBooking) {
+
+
+        logger.info("Booking notification started. Booking ID: {}, Status: {}",
+                donationBooking.getId(), donationBooking.getDonationBookingStatus());
+
         BookingNotification bookingNotification = new BookingNotification(
         donationBooking.getId(), donationBooking.getDonationBookingStatus(),
                 "Donation booking status changed to " + donationBooking.getDonationBookingStatus());
@@ -38,14 +49,27 @@ public class BookingNotificationService {
         notification.setDonationBooking(donationBooking);
         notification.setMessage(bookingNotification.getNotificationMessage());
 
-        // Save the notification in PostgreSQL
+
         notificationRepository.save(notification);
 
-        // Get the email of the donor who owns this booking
         String donorEmail = donationBooking.getDonorProfile().getUser().getEmail();
 
-        messagingTemplate.convertAndSendToUser(donorEmail,
-                "/queue/notifications", bookingNotification);
+        TransactionSynchronizationManager.registerSynchronization(
+                new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {messagingTemplate.convertAndSendToUser(
+                                donorEmail,
+                                    "/queue/notifications", bookingNotification);
+                            logger.info("WebSocket notification published. Booking ID: {}",
+                                    donationBooking.getId());
+                        } catch (Exception e) {
+                            logger.error("WebSocket notification failed. Booking ID: {}",
+                                    donationBooking.getId(), e);
+                        }
+                    }
+                }
+        );
 
     }
     // saved notifications for the login user
