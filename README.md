@@ -130,7 +130,13 @@ The following features are planned for future versions:
 
 The following Entity Relationship Diagram represents the database design for the Healthcare Support System.
 
-![Healthcare Support System ERD](docs/healthcare-support-erd.png)
+
+
+
+![Healthcare Support System ERD](docs/healthcare-support-erd%20%283%29.png)
+
+
+
 
 ## Project Architecture
 
@@ -147,6 +153,7 @@ The project is organized into the following packages:
 - **exception** - Handles custom exceptions and global error handling.
 - **config** - Contains application and security configuration.
 
+
 ### Package Structure
 
 ```text
@@ -162,6 +169,26 @@ com.app.med_support
 ├── security
 ├── exception
 └── config
+```
+
+### Application Flow
+
+```text
+Client / Postman
+        ↓
+Controller
+        ↓
+Data Transfer Object + Validation
+        ↓
+Service
+        ↓
+Business Rules
+        ↓
+Repository
+        ↓
+PostgreSQL
+```
+
 
 
 ### Application Flow
@@ -217,7 +244,7 @@ The REST API is documented and can be tested interactively using Swagger/OpenAPI
 | Method | Endpoint | Description | Access |
 |---|---|---|---|
 | POST | `/api/blood-requests` | Create a blood request for the logged-in staff member's hospital | HOSPITAL_STAFF |
-| GET | `/api/blood-requests?page={page}&size={size}&sortBy={field}&direction={asc/desc}` | Retrieve blood requests with pagination and sorting | Authenticated User |
+| GET | `/api/blood-requests?page={page}&size={size}&sortBy={field}&direction={asc/desc}` | Retrieve blood requests with pagination and sorting | ADMIN |
 | GET | `/api/blood-requests/open` | Retrieve all blood requests with OPEN status | DONOR |
 | GET | `/api/blood-requests/open/blood-type/{bloodType}` | Retrieve OPEN blood requests filtered by blood type | DONOR |
 | GET | `/api/blood-requests/{bloodRequestId}` | Retrieve a specific blood request by ID | ADMIN / HOSPITAL_STAFF |
@@ -288,6 +315,7 @@ med_support
 ```
 
 
+
 ### 3. Configure Environment Variables
 
 The application uses environment variables to protect sensitive information.
@@ -299,16 +327,8 @@ DB_PASSWORD=your_postgresql_password
 MAIL_USERNAME=your_email_address
 MAIL_PASSWORD=your_email_app_password
 JWT_SECRET=your_jwt_secret
-
-### 4. Run the Application
-
-On Windows:
-
-```bash
-.\mvnw spring-boot:run
 ```
 
-The application will run on:
 
 ```text
 http://localhost:8080
@@ -408,3 +428,55 @@ Used as a reference for authentication, password encryption, endpoint protection
 **URL:** https://springdoc.org/
 
 Used as a reference for documenting and testing REST API endpoints through Swagger UI.
+
+
+# Project 3 — Concurrency & Multithreading
+
+## Project Overview
+
+Project 3 is an extension of the Med Support Blood Donation Management System developed in Project 2.
+
+The main goal of Project 3 is to improve the application's ability to handle multiple operations happening at the same time while maintaining data consistency and preventing booking conflicts.
+
+In this phase, I introduced donation slots with limited capacity, implemented database locking to prevent race conditions, and added background processing using Java multithreading and ExecutorService.
+
+The project also includes automated donation reminders, asynchronous email processing, improved booking management, and automatic blood request completion.
+
+These improvements allow Med Support to manage simultaneous donation bookings more safely while providing a better experience for donors and hospital staff.
+
+## Project 3 Objectives
+
+- Prevent overbooking when multiple donors try to reserve the same donation slot.
+- Prevent conflicting bookings for the same donor.
+- Protect shared database records using pessimistic locking.
+- Maintain database consistency using transactions.
+- Use ExecutorService and a thread pool to process background tasks.
+- Send booking-related emails asynchronously.
+- Process scheduled donation reminders.
+- Automatically complete blood requests when the required number of donations is fulfilled.
+- Extend booking notifications and hospital request history.
+- Test concurrent operations to verify that shared resources are handled safely.
+
+
+## New Features Introduced in Project 3
+
+Project 3 extends the existing Med Support application with new functionality focused on concurrency, thread safety, and background processing.
+
+The main improvements include:
+
+1. **Donation Slot Management:** Hospital staff can create and manage donation slots with limited capacity. Donors can select available slots when booking appointments.
+
+2. **Concurrency-Safe Booking:** The application uses database locking and transactions to prevent overbooking when multiple donors attempt to reserve the same slot simultaneously.
+
+3. **Duplicate Booking Prevention:** Donor profile locking helps prevent conflicting bookings created by simultaneous requests from the same donor.
+
+4. **Donation Reminders:** Donors can schedule reminders for their upcoming appointments. A scheduled process identifies reminders that are due and submits them for processing.
+
+5. **Asynchronous Processing:** An ExecutorService with a fixed thread pool of three workers processes reminder tasks and booking-related email tasks.
+
+6. **Automatic Blood Request Completion:** When the number of completed donations reaches the required number of blood units, the blood request automatically changes to COMPLETED.
+
+7. **Improved Booking Notifications:** Booking status updates are saved as notifications and delivered through WebSocket after successful database transactions.
+
+8. **Hospital Request History:** Hospital staff can view all blood requests in General History and fully completed requests in Completed History.
+
