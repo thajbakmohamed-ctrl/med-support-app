@@ -1,1 +1,35 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Med Support | Blood Donation</title><link rel="stylesheet" href="styles.css"></head><body><div class="app"><aside class="sidebar"><div class="brand"><span class="brand-icon">✚</span><div><strong>Med Support</strong><small>Every drop matters.</small></div></div><div class="side-label">WORKSPACE</div><nav id="nav"></nav><div class="side-bottom"><div class="side-note">♥ <span>Connecting donors with people who need them.</span></div><button class="side-logout" id="logout">↪ &nbsp; Sign out</button></div></aside><main class="main"><header class="topbar"><div><span class="eyebrow">BLOOD DONATION MANAGEMENT</span><h1 id="pageTitle">Overview</h1></div><div class="top-actions"><span id="connection" class="connection">● API not checked</span><span id="roleBadge" class="role-badge">Guest</span></div></header><div id="notice" role="status"></div><section id="view"></section></main></div><script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script><script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script><script src="app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#781c32">
+  <meta name="description" content="Med Support hospital blood donation and appointment management.">
+  <title>Med Support | Donation Management</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#view">Skip to content</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Workspace sidebar">
+      <a class="brand" href="./" aria-label="Med Support home"><span class="brand-icon" aria-hidden="true">✚</span><div><strong>Med Support</strong><small>DONATION MANAGEMENT</small></div></a>
+      <div class="side-label">YOUR WORKSPACE</div>
+      <nav id="nav" aria-label="Main navigation"></nav>
+      <div class="side-bottom">
+        <div class="side-note"><span aria-hidden="true">♡</span><div><strong>Care starts with you.</strong><p>Connecting generous donors with hospital care teams.</p></div></div>
+        <button class="side-logout" id="logout">↪ &nbsp; Sign out</button>
+        <small class="sidebar-footer">MED SUPPORT · HOSPITAL NETWORK</small>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div><span class="eyebrow">HOSPITAL DONATION WORKSPACE</span><h1 id="pageTitle">Overview</h1></div><div class="top-actions"><span id="connection" class="connection">Connection not checked</span><span id="roleBadge" class="role-badge">Guest</span></div></header>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section id="view" tabindex="-1" aria-label="Workspace content"></section>
+      <footer class="workspace-footer"><span>Med Support</span><span>Connecting care. Supporting life.</span></footer>
+    </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
