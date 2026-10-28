@@ -792,3 +792,168 @@ These views help hospital staff manage active requests and review completed dona
 
 
 
+## Concurrency Testing and Validation
+
+Project 3 includes automated tests designed to validate booking rules, database consistency, and concurrent processing.
+
+The main testing scenarios focus on preventing donation slot overbooking, handling simultaneous REST API requests, and avoiding duplicate reminder processing.
+
+### 1. Concurrent Donation Booking Test
+
+**Test Class:** `DonationBookingConcurrencyTest.java`
+
+**Scenario:**
+
+Five donors attempt to book the same donation slot at approximately the same time.
+
+The donation slot has a capacity of two.
+
+**Expected Results:**
+
+- Two donors successfully create bookings.
+- Three donors receive conflict errors.
+- The final reservation count remains two.
+- The number of successful bookings does not exceed the slot capacity.
+
+The test uses five worker threads and a synchronization latch to start the booking attempts concurrently.
+
+### 2. Concurrent REST API Test
+
+**Test Class:** `DonationBookingRestConcurrencyTest.java`
+
+**Scenario:**
+
+Five authenticated donors send concurrent HTTP requests to create bookings for the same donation slot with a capacity of two.
+
+**Expected Results:**
+
+- Two requests return `201 Created`.
+- Three requests return `409 Conflict`.
+- The database does not contain more bookings than the slot allows.
+
+This test checks concurrency behavior through the REST API rather than calling the service directly.
+
+### 3. Concurrent Donation Reminder Test
+
+**Test Class:** `DonationReminderConcurrencyTest.java`
+
+**Scenario:**
+
+The same donation reminder is submitted five times to the background worker pool.
+
+**Expected Results:**
+
+- Only one worker successfully claims the reminder.
+- Only one reminder notification is saved.
+- The reminder changes to `SENT`.
+- The email service is invoked once.
+
+The application uses an atomic database update to prevent duplicate reminder processing.
+
+### 4. Automatic Blood Request Completion Test
+
+**Scenario:**
+
+A blood request requires two blood units.
+
+Two donation bookings are created and updated to `COMPLETED`.
+
+**Observed Results During Manual Testing:**
+
+- After the first completed donation, the blood request remained `OPEN`.
+- After the second completed donation, the blood request automatically changed to `COMPLETED`.
+- The application log confirmed completion of Blood Request #22.
+
+This manual test demonstrated the automatic completion workflow.
+
+### Test Execution Status
+
+The automated concurrency test classes are implemented in the project source code.
+
+However, their current execution results have not yet been verified against the latest Project 3 implementation.
+
+The scenarios above describe the assertions and expected behavior of the automated tests, not a claim that all tests currently pass.
+
+Additional testing is recommended for simultaneous cancellation, concurrent donation completion, and failure recovery in background tasks.
+
+### Concurrency Techniques Used in Testing
+
+- ExecutorService and multiple worker threads
+- CountDownLatch for coordinating simultaneous operations
+- Concurrent REST API requests
+- PostgreSQL transactions
+- Pessimistic database locking
+- Atomic database updates
+- Assertions for booking capacity and reminder processing
+
+These tests help evaluate whether the application handles competing operations safely and maintains consistent data.
+
+
+## Project 3 Challenges
+
+During Project 3, several technical challenges were encountered while extending Med Support with concurrency and multithreading.
+
+### 1. Preventing Donation Slot Overbooking
+
+One of the main challenges was handling multiple donors attempting to reserve the same slot simultaneously.
+
+Without concurrency control, two requests could read the same available capacity and create more bookings than the slot allows.
+
+To address this, I implemented pessimistic database locking and transactional booking operations.
+
+### 2. Preventing Conflicting Booking Operations
+
+Simultaneous operations may attempt to create duplicate bookings or update the same booking at the same time.
+
+Donor profile and donation booking locks were used to help prevent conflicting operations and protect data consistency.
+
+### 3. Managing Asynchronous Tasks
+
+Sending booking-related emails directly within HTTP request processing could increase response times.
+
+To address this, I used ExecutorService with a fixed thread pool of three workers to process email and reminder tasks in the background.
+
+### 4. Preventing Duplicate Reminder Processing
+
+Multiple workers may attempt to process the same donation reminder simultaneously.
+
+I used an atomic database update to allow only one worker to claim a pending reminder before processing it.
+
+### 5. Automatically Completing Blood Requests
+
+A blood request may require several completed donations before it can be marked as fulfilled.
+
+I implemented automatic completion logic that counts completed donation bookings and updates the blood request when the required number of blood units has been reached.
+
+A pessimistic lock helps protect this operation from conflicting concurrent updates.
+
+---
+
+## Known Limitations
+
+Although Project 3 introduces important improvements, several areas require further testing or refinement.
+
+- **Concurrent status changes:** Additional testing is needed for simultaneous donation completion and cancellation.
+- **Reminder recovery:** A reminder interrupted while in `PROCESSING` may require a recovery mechanism.
+- **Email delivery:** Successful background task submission does not guarantee that an email reaches the recipient's inbox.
+- **Thread pool capacity:** The fixed thread pool uses three workers, but its task queue is unbounded and could grow under heavy load.
+- **Temporary testing delay:** A three-second delay used to demonstrate database locking should be removed before production deployment.
+- **Automated tests:** The latest Project 3 test suite still requires a complete execution and review of its results.
+
+---
+
+## Future Improvements
+
+The following improvements could be introduced in future versions:
+
+1. Implement automatic recovery and retry handling for interrupted reminders and failed email tasks.
+2. Improve thread pool configuration with bounded queues and monitoring.
+3. Add more automated tests for concurrent booking cancellation and donation completion.
+4. Remove temporary testing delays and perform performance testing under realistic workloads.
+5. Add monitoring for background tasks, transaction failures, and database lock contention.
+6. Expand the platform to support additional healthcare services and volunteer opportunities.
+
+These improvements would help make Med Support more reliable and scalable for real-world usage.
+
+
+
