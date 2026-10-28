@@ -480,3 +480,55 @@ The main improvements include:
 
 8. **Hospital Request History:** Hospital staff can view all blood requests in General History and fully completed requests in Completed History.
 
+## New Database Entities
+
+Three new JPA entities were added during Project 3.
+
+### 1. DonationSlot
+
+The `DonationSlot` entity represents an appointment slot created by a hospital.
+
+It stores the date, start time, end time, capacity, and number of reserved places.
+
+The system uses this entity to control appointment availability and prevent overbooking.
+
+A donation slot is associated with a hospital and can be linked to multiple donation bookings.
+
+### 2. DonationReminder
+
+The `DonationReminder` entity represents a reminder associated with a donation booking.
+
+It allows the application to track scheduled reminders and their processing status.
+
+The reminder workflow uses the following states:
+
+- `PENDING` — Waiting to be processed.
+- `PROCESSING` — Claimed by a background worker.
+- `SENT` — Reminder notification processing completed.
+- `FAILED` — Reminder processing failed.
+
+A scheduled task checks for due reminders and submits them to the ExecutorService for processing.
+
+The updated database contains ten JPA entities in total.
+
+
+### 3. HospitalDepartment
+
+The `HospitalDepartment` entity was added to organize hospital departments within the Med Support system.
+
+Each department belongs to one hospital, while a hospital can have multiple departments.
+
+The entity contains the following fields:
+
+- `id` — Unique department identifier.
+- `departmentName` — Name of the department.
+- `description` — Description of the department.
+- `hospital` — Reference to the associated hospital.
+
+The entity uses a Many-to-One relationship with the existing `Hospital` entity.
+
+A simple REST API allows hospital staff to create departments for their own hospital. Donors and hospital staff can also retrieve departments belonging to a specific hospital.
+
+This feature does not require additional concurrency logic or database locks.
+
+
