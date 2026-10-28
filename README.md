@@ -532,3 +532,86 @@ A simple REST API allows hospital staff to create departments for their own hosp
 This feature does not require additional concurrency logic or database locks.
 
 
+## Concurrency and Race Condition Handling
+
+### Business Scenario
+
+In Med Support, multiple donors may attempt to book the same donation slot at the same time.
+
+Each donation slot has a limited capacity. Without proper concurrency control, simultaneous booking requests could cause overbooking or inconsistent reservation counts.
+
+### Race Condition Example
+
+Consider a donation slot with a capacity of 1.
+
+Two donors attempt to reserve the same slot simultaneously:
+
+1. Donor A checks the slot and sees one available place.
+2. Donor B checks the same slot before Donor A finishes booking.
+3. Both donors attempt to reserve the last available place.
+
+Without concurrency control, both requests might succeed even though only one place is available.
+
+This situation is called a **Race Condition**, where the final result depends on the timing of concurrent operations.
+
+### Solution: Pessimistic Database Locking
+
+To prevent conflicting database operations, Med Support uses `PESSIMISTIC_WRITE` locking with Spring Data JPA.
+
+The application locks the required database record while a transaction performs its checks and updates.
+
+Other transactions requesting a conflicting lock on the same record must wait until the current transaction releases it.
+
+### Four Database Locks
+
+**1. Donor Profile Lock**
+
+Protects the donor's profile during booking creation.
+
+It prevents simultaneous requests from the same donor from creating conflicting bookings.
+
+**2. Donation Slot Lock**
+
+Protects the donation slot's capacity and reservation count.
+
+It ensures that multiple donors cannot reserve more places than the slot allows.
+
+**3. Donation Booking Lock**
+
+Protects an existing donation booking while its status is being updated.
+
+It helps prevent conflicting changes to the same booking.
+
+**4. Blood Request Lock**
+
+Protects the blood request during donation completion.
+
+It allows the application to safely count completed donations and update the request status when the required blood units have been fulfilled.
+
+### Transaction Management
+
+Med Support uses Spring's `@Transactional` annotation to manage related database operations as a single transaction.
+
+For example, when creating a donation booking:
+
+1. The system locks the donor profile.
+2. It checks for conflicting bookings.
+3. It locks the selected donation slot.
+4. It checks the remaining capacity.
+5. It creates the donation booking.
+6. It updates the slot's reservation count.
+7. The transaction commits if all operations succeed.
+
+If an error occurs, the transaction can roll back its database changes, helping prevent partial updates.
+
+### Expected Concurrent Booking Result
+
+For a donation slot with one available place:
+
+- Donor A successfully books the slot.
+- Donor B receives a conflict response if the slot becomes full.
+- The final reservation count remains within the slot capacity.
+
+This approach helps maintain database consistency and prevents overbooking when multiple booking requests are processed concurrently.
+
+
