@@ -957,3 +957,165 @@ These improvements would help make Med Support more reliable and scalable for re
 
 
 
+## Project 3 — API Updates
+
+Project 3 extends the existing REST API with donation slot management and donation reminder functionality.
+
+The existing authentication, blood request, and donation booking APIs are reused and extended to support the new business rules.
+
+### Donation Slot APIs
+
+The donation slot functionality allows hospital staff to manage appointment availability and allows donors to find suitable slots.
+
+The implementation includes:
+
+- Creating donation slots for a hospital.
+- Retrieving available donation slots.
+- Updating donation slot capacity.
+- Closing donation slots.
+- Validating capacity before accepting bookings.
+- Preventing overbooking during simultaneous booking attempts.
+
+The application uses database transactions and pessimistic locking to protect shared slot data.
+
+
+#### Donation Slot Endpoints
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| GET | `/api/donation-slots` | Retrieve all donation slots | DONOR / HOSPITAL_STAFF |
+| GET | `/api/donation-slots/{slotId}` | Retrieve a donation slot by ID | DONOR / HOSPITAL_STAFF |
+| GET | `/api/donation-slots/available/{hospitalId}` | Retrieve available slots for a hospital | DONOR / HOSPITAL_STAFF |
+| POST | `/api/donation-slots` | Create a donation slot for the logged-in staff member's hospital | HOSPITAL_STAFF |
+| PUT | `/api/donation-slots/{slotId}` | Update the capacity of a donation slot | HOSPITAL_STAFF |
+| PATCH | `/api/donation-slots/{slotId}/close` | Close a donation slot to prevent new bookings | HOSPITAL_STAFF |
+
+
+### Donation Reminder APIs
+
+The donation reminder functionality allows donors to schedule reminders for their upcoming donation appointments.
+
+The implementation includes:
+
+- Creating reminders for eligible donation bookings.
+- Validating reminder ownership and scheduling rules.
+- Tracking reminders using processing statuses.
+- Automatically processing due reminders with a scheduler.
+- Preventing duplicate reminder processing using atomic database updates.
+
+Reminder notifications are saved in the database, while supported email tasks are processed asynchronously.
+
+
+#### Donation Reminder Endpoints
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| POST | `/api/donation-reminders?bookingId={bookingId}&reminderTime={reminderTime}` | Schedule a reminder for the authenticated donor's own donation booking | DONOR |
+
+
+
+### Hospital Department APIs
+
+Project 3 introduces basic hospital department management.
+
+Hospital staff can create departments for their assigned hospital, while donors and hospital staff can view departments.
+
+#### Hospital Department Endpoints
+
+| Method | Endpoint | Description | Access |
+|---|---|---|---|
+| POST | `/api/hospital-departments` | Create a department for the authenticated staff member's hospital | HOSPITAL_STAFF |
+| GET | `/api/hospital-departments/hospital/{hospitalId}` | Retrieve departments belonging to a specific hospital | DONOR / HOSPITAL_STAFF |
+
+### Hospital Department Testing
+
+The Hospital Department APIs were tested manually using Postman.
+
+- **POST:** Successfully created a Blood Bank department for Hospital ID 3.
+- **GET:** Successfully retrieved the department belonging to Hospital ID 3.
+- **Response DTO:** Returned the department ID, name, description, and hospital ID.
+
+
+
+### Updated Donation Booking Workflow
+
+The existing donation booking APIs have been extended with:
+
+- Donation slot availability checks.
+- Concurrency-safe booking creation.
+- Duplicate booking prevention.
+- Reservation count updates during booking cancellation.
+- Database locking during booking status changes.
+- Asynchronous confirmation and cancellation email processing.
+
+### Updated Blood Request Workflow
+
+The blood request workflow now supports automatic completion.
+
+When the number of completed donation bookings reaches the required number of blood units, the application updates the corresponding blood request from `OPEN` to `COMPLETED`.
+
+The hospital dashboard also provides Active Requests, General History, and Completed History views.
+
+### API Documentation
+
+The application uses Swagger/OpenAPI to document and explore REST endpoints.
+
+After starting the application, Swagger UI is available at:
+
+`http://localhost:8080/swagger-ui/index.html`
+
+The exact HTTP methods, URL paths, request bodies, authentication requirements, and response codes should be checked against the current controller implementations and Swagger documentation.
+
+---
+
+## Project 3 — Credits and External Resources
+
+The following resources supported the development and understanding of the concurrency and multithreading features introduced in Project 3.
+
+### General Assembly Java Developer Bootcamp
+
+Used for learning Java concurrency, multithreading, database transactions, backend architecture, and Spring Boot development.
+
+### Java Concurrency Documentation
+
+**Oracle Java ExecutorService Documentation**
+
+https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/concurrent/ExecutorService.html
+
+Reference for understanding ExecutorService, task submission, and thread pool management.
+
+### Spring Transaction Management
+
+**Spring Framework — Transaction Management**
+
+https://docs.spring.io/spring-framework/reference/data-access/transaction.html
+
+Reference for understanding transaction boundaries, commit behavior, and rollback.
+
+### Spring Data JPA Locking
+
+**Spring Data JPA — Locking**
+
+https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html
+
+Reference for understanding database locking in Spring Data JPA repositories.
+
+### Spring Scheduling
+
+**Spring Framework — Task Execution and Scheduling**
+
+https://docs.spring.io/spring-framework/reference/integration/scheduling.html
+
+Reference for understanding scheduled tasks and background execution.
+
+### Spring WebSocket
+
+**Spring Framework — WebSocket and STOMP**
+
+https://docs.spring.io/spring-framework/reference/web/websocket/stomp.html
+
+Reference for real-time messaging and notifications.
+
+
+
+
