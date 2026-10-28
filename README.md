@@ -615,3 +615,180 @@ For a donation slot with one available place:
 This approach helps maintain database consistency and prevents overbooking when multiple booking requests are processed concurrently.
 
 
+## Multithreading and Asynchronous Processing
+
+
+### ExecutorService and Thread Pool
+
+In Project 3, Med Support uses Java's **ExecutorService** to process background tasks asynchronously without blocking the main HTTP request.
+
+The application uses a fixed thread pool of three worker threads, configured in `ReminderExecutorConfig.java`.
+
+The thread pool is created using `Executors.newFixedThreadPool(3)`.
+
+It processes booking-related emails and donation reminders in the background.
+
+Instead of creating a new thread for every task, the application submits tasks to the ExecutorService, which assigns them to available worker threads.
+
+If all three workers are busy, additional tasks wait in a queue until a worker becomes available.
+
+
+### Asynchronous Booking Emails
+
+When a donation booking is confirmed or cancelled, the application can send an email notification to the donor.
+
+Sending an email may take time because it requires communication with an external mail server.
+
+To avoid blocking the main request, the application submits email tasks to the ExecutorService.
+
+The `afterCommit()` callback is used to ensure that email processing starts only after the related database transaction has committed successfully.
+
+The workflow is:
+
+1. Hospital staff confirms or cancels a donation booking.
+2. The booking status is updated in the database.
+3. The database transaction commits successfully.
+4. The email task is submitted to the thread pool.
+5. An available worker thread processes the email task.
+
+This separates the database operation from the potentially slower email-sending process.
+
+### Scheduled Donation Reminders
+
+Project 3 introduces donation reminders for upcoming appointments.
+
+Donors can schedule reminders for their donation bookings.
+
+The application uses Spring's `@Scheduled` functionality to check for reminders that are due.
+
+The scheduler runs every ten seconds and identifies pending reminders that should be processed.
+
+Due reminders are submitted to the ExecutorService for background processing.
+
+### Reminder Processing Workflow
+
+Each reminder follows a processing lifecycle:
+
+1. **PENDING:** The reminder is waiting for its scheduled time.
+2. **PROCESSING:** A worker claims the reminder for processing.
+3. **SENT:** The reminder notification has been processed successfully.
+4. **FAILED:** Reminder processing failed.
+
+To prevent multiple workers from processing the same reminder at the same time, the application uses an atomic database update to claim the reminder.
+
+Only the worker that successfully changes the reminder status from `PENDING` to `PROCESSING` can continue processing it.
+
+This protects the system from creating duplicate reminder notifications when concurrent workers attempt to process the same reminder.
+
+### Why Multithreading Was Used
+
+Multithreading improves Med Support by allowing background tasks to run independently of the main request-processing flow.
+
+It provides the following benefits:
+
+- Booking-related emails can be processed without blocking the main HTTP request.
+- Multiple background tasks can execute concurrently.
+- The number of worker threads is controlled through a fixed-size pool.
+- Scheduled donation reminders can be processed automatically.
+- Atomic reminder claiming helps prevent duplicate processing by concurrent workers.
+
+The thread pool improves task execution, while database transactions and concurrency controls protect shared data.
+
+
+
+## Automatic Blood Request Completion
+
+Project 3 introduces automatic blood request completion based on the number of successfully completed donations.
+
+Previously, blood requests required manual status management. The updated system can automatically change a blood request from `OPEN` to `COMPLETED` when the required blood units have been fulfilled.
+
+### Business Rule
+
+**One completed donation equals one blood unit.**
+
+For example, if a hospital creates a blood request requiring two blood units:
+
+1. Donor A completes a donation.
+2. The system counts one completed donation.
+3. The blood request remains `OPEN` because one more unit is required.
+4. Donor B completes a donation.
+5. The system counts two completed donations.
+6. The blood request automatically changes to `COMPLETED`.
+
+### Database Consistency
+
+The application uses `@Transactional` and `PESSIMISTIC_WRITE` locking on the blood request when updating a booking's status.
+
+When a booking becomes `COMPLETED`, the application:
+
+1. Updates the donation booking status.
+2. Flushes the updated booking to the database.
+3. Counts bookings with `COMPLETED` status for the same blood request.
+4. Compares the completed donation count with the required blood units.
+5. Updates the blood request to `COMPLETED` when the required number is reached.
+
+These operations are performed within a database transaction to help maintain consistency during concurrent updates.
+
+### Example Tested
+
+Blood Request #22 required two blood units.
+
+Two donation bookings were updated through the following statuses:
+
+`PENDING → CONFIRMED → COMPLETED`
+
+After the first completed donation, the blood request remained `OPEN`.
+
+After the second completed donation, the application automatically updated the blood request to `COMPLETED`.
+
+The application logged the successful completion:
+
+`Blood request completed. Request ID: 22`
+
+---
+
+## Real-Time Booking Notifications
+
+Med Support uses Spring WebSocket and STOMP to provide real-time booking status notifications.
+
+When hospital staff updates a donation booking, the application creates a notification for the donor.
+
+The notification is saved in the database and published through WebSocket after the transaction commits successfully.
+
+This ensures that real-time booking updates are sent only after the corresponding database changes have been saved successfully.
+
+### Notification Workflow
+
+1. Hospital staff updates a donation booking.
+2. The application updates the booking status.
+3. A notification is created and saved in the database.
+4. The database transaction commits.
+5. The application publishes the notification through WebSocket.
+6. The donor can receive the notification through the frontend.
+
+Booking-related emails are also processed asynchronously using the ExecutorService.
+
+---
+
+## Hospital Blood Request History
+
+Project 3 also improves the hospital staff dashboard by introducing separate views for blood request history.
+
+### Active Requests
+
+Displays blood requests that are currently `OPEN` and have not passed their required date.
+
+### General History
+
+Displays the hospital's blood requests regardless of their status, allowing staff to review past and current requests.
+
+### Completed History
+
+Displays only blood requests with the backend status `COMPLETED`.
+
+A request appears in Completed History after the backend confirms its completion. A fully booked donation slot does not automatically mean that the required blood donations have been completed.
+
+These views help hospital staff manage active requests and review completed donation workflows more clearly.
+
+
+
