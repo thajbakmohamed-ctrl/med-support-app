@@ -21,5 +21,7 @@ public interface DonationBookingRepository extends JpaRepository<DonationBooking
     boolean existsByDonorProfileIdAndDonationBookingDateAndDonationBookingTimeAndDonationBookingStatusNot(
     Long donorProfileId, LocalDate donationBookingDate, LocalTime donationBookingTime, String donationBookingStatus);
 
-
+    // Count completed donations for a blood request
+    long countByBloodRequestIdAndDonationBookingStatus(Long bloodRequestId,
+            String donationBookingStatus);
 }

@@ -15,6 +15,7 @@ import com.app.med_support.model.User;
 import com.app.med_support.model.DonorProfile;
 import com.app.med_support.repository.UserRepository;
 import com.app.med_support.model.DonationBooking;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -136,6 +137,9 @@ public class DonationBookingConcurrencyTest {
 
         AtomicInteger successfulBookings = new AtomicInteger(0);
 
+
+        AtomicInteger rejectedBookings = new AtomicInteger(0);
+
         List<Future<?>> futures = new ArrayList<>();
 
         for (DonorProfile donor : testDonors) {
@@ -162,11 +166,28 @@ public class DonationBookingConcurrencyTest {
                 booking.setDonationBookingDate(testSlot.getSlotDate());
                 booking.setDonationBookingTime(testSlot.getStartTime());
 
-                DonationBooking result =
-                        donationBookingService.createDonationBooking(booking);
+                try {
 
-                if (result != null) {
-                    successfulBookings.incrementAndGet();
+                    DonationBooking result = donationBookingService.createDonationBooking(booking);
+
+                    if (result != null) {
+                        successfulBookings.incrementAndGet();
+
+                        System.out.println("BOOKING SUCCESS - Donor ID: " + donor.getId());
+                    }
+
+
+                } catch (ResponseStatusException e) {
+
+                    if (e.getStatusCode().value() == 409) {
+
+                        rejectedBookings.incrementAndGet();
+
+                        System.out.println("BOOKING REJECTED - Slot is full");
+
+                    } else {
+                        throw e;
+                    }
                 }
 
                 return null;
@@ -185,12 +206,36 @@ public class DonationBookingConcurrencyTest {
             executor.shutdownNow();
         }
 
-        DonationSlot updatedSlot =
-                donationSlotRepository.findById(testSlot.getId()).orElseThrow();
+        DonationSlot updatedSlot = donationSlotRepository.findById(testSlot.getId()).orElseThrow();
+
+
+        long savedBookings = donationBookingRepository.findAll()
+                .stream()
+                .filter(booking ->
+                        booking.getDonationSlot() != null &&
+                                booking.getDonationSlot().getId().equals(testSlot.getId())
+                )
+                .count();
+
+
+        System.out.println("\n========== CONCURRENCY TEST ==========");
+
+        System.out.println("Total Booking Attempts: " + testDonors.size());
+        System.out.println("Successful Bookings: " + successfulBookings.get());
+        System.out.println("Rejected Bookings: " + rejectedBookings.get());
+        System.out.println("Slot Capacity: " + updatedSlot.getCapacity());
+        System.out.println("Final Reserved Count: " + updatedSlot.getReservedCount());
+        System.out.println("Saved Bookings in Database: " + savedBookings);
 
         assertEquals(2, successfulBookings.get());
+        assertEquals(3, rejectedBookings.get());
         assertEquals(2, updatedSlot.getReservedCount());
         assertEquals(2, updatedSlot.getCapacity());
+        // Verify that only two bookings were saved in the database
+        assertEquals(2, savedBookings);
+
+        System.out.println("RESULT: PASS - No Overbooking");
+        System.out.println("======================================\n");
     }
 
 
