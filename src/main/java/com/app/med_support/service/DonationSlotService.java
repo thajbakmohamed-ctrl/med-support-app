@@ -4,9 +4,13 @@ import com.app.med_support.model.Hospital;
 import com.app.med_support.repository.DonationSlotRepository;
 import com.app.med_support.repository.HospitalRepository;
 import com.app.med_support.response.DonationSlotResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import com.app.med_support.model.DonationSlot;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -17,6 +21,7 @@ public class DonationSlotService {
 
     private final DonationSlotRepository donationSlotRepository;
     private final HospitalRepository hospitalRepository;
+    private static final Logger logger = LoggerFactory.getLogger(DonationSlotService.class);
 
     public DonationSlotService(
             DonationSlotRepository donationSlotRepository,
@@ -33,15 +38,28 @@ public class DonationSlotService {
         DonationSlot slot = donationSlotRepository.findByIdForUpdate(slotId)
                 .orElseThrow(() -> new IllegalArgumentException("Donation slot not found"));
 
+        // Log the start of slot reservation
+        logger.info("Slot reservation started. Slot ID: {}", slotId);
+
         if (!"OPEN".equals(slot.getStatus())) {
             throw new IllegalStateException("Donation slot is not open");
         }
 
         if (slot.getReservedCount() >= slot.getCapacity()) {
-            throw new IllegalStateException("Donation slot is full");
+
+            // Log when the slot is full
+            logger.warn("Slot full. Slot ID: {}, Reserved: {}, Capacity: {}",
+                    slotId, slot.getReservedCount(), slot.getCapacity());
+
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Donation slot is full");
         }
 
         slot.setReservedCount(slot.getReservedCount() + 1);
+
+        // Log the updated reserved count
+        logger.info("Slot reservation updated. Slot ID: {}, Reserved: {}, Capacity: {}",
+                slot.getId(), slot.getReservedCount(), slot.getCapacity());
 
     }
 
@@ -96,7 +114,13 @@ public class DonationSlotService {
         slot.setReservedCount(0);
         slot.setStatus("OPEN");
 
-        return donationSlotRepository.save(slot);
+
+        DonationSlot savedSlot = donationSlotRepository.save(slot);
+
+        logger.info("Donation slot saved. Slot ID: {}, Capacity: {}",
+                savedSlot.getId(), savedSlot.getCapacity());
+
+        return savedSlot;
     }
 
     public DonationSlotResponse toResponse(DonationSlot slot) {
@@ -144,6 +168,9 @@ public class DonationSlotService {
         }
 
         slot.setCapacity(updatedSlot.getCapacity());
+        // Log the updated donation slot capacity
+        logger.info("Donation slot capacity updated in transaction. Slot ID: {}, Capacity: {}",
+                slot.getId(), slot.getCapacity());
 
         return slot;
     }
@@ -165,6 +192,10 @@ public class DonationSlotService {
         }
 
         slot.setStatus("CLOSED");
+
+        // Log when a donation slot is closed
+        logger.info("Donation slot closed in transaction. Slot ID: {}",
+                slot.getId());
 
         return donationSlotRepository.save(slot);
     }
