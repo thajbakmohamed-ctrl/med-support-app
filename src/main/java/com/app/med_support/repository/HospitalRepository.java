@@ -9,4 +9,5 @@ public interface HospitalRepository extends JpaRepository<Hospital, Long> {
     Hospital findByHospitalName(String hospitalName);
     List<Hospital> findByHospitalActive(boolean hospitalActive);
     boolean existsByHospitalPhone(String hospitalPhone);
+    List<Hospital> findByHospitalNameContainingIgnoreCase(String hospitalName);
 }

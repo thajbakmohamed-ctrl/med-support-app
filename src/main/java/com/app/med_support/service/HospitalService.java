@@ -85,5 +85,8 @@ public class HospitalService {
         hospital.setHospitalDescription(hospitalDetails.getHospitalDescription());
         return hospitalRepository.save(hospital);
     }
+    public List<Hospital> searchHospitals(String name) {
+        return hospitalRepository.findByHospitalNameContainingIgnoreCase(name);
+    }
 
 }

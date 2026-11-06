@@ -70,8 +70,9 @@ public class DonorProfile {
     @Column(name = "notes")
     private String notesAboutTheDonor;
 
+
     @CreationTimestamp
-    @Column(name = "created_at")
+    @Column(name = "created_at_donor_profile", nullable = false)
     private LocalDateTime createdAtDonorProfile;
 
     @UpdateTimestamp

@@ -2,12 +2,16 @@ package com.app.med_support.service;
 
 import com.app.med_support.model.AuditLog;
 import com.app.med_support.repository.AuditLogRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class AuditLogService {
 
     private final AuditLogRepository auditLogRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(AuditLogService.class);
 
     public AuditLogService(AuditLogRepository auditLogRepository) {
         this.auditLogRepository = auditLogRepository;
@@ -19,6 +23,11 @@ public class AuditLogService {
 
         AuditLog auditLog = new AuditLog(auditAction, performedByEmail, actionDescription);
 
-        return auditLogRepository.save(auditLog);
+
+        AuditLog savedAuditLog = auditLogRepository.save(auditLog);
+
+        logger.debug("Audit log saved. Audit action: {}", auditAction);
+
+        return savedAuditLog;
     }
 }

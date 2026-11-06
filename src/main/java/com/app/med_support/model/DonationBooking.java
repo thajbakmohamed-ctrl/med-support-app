@@ -57,6 +57,10 @@ public class DonationBooking {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAtDonationBooking;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "donation_slot_id")
+    private DonationSlot donationSlot;
 }
 
 
