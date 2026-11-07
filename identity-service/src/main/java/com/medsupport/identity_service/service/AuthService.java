@@ -7,6 +7,7 @@ import com.medsupport.identity_service.request.RegisterRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 import com.medsupport.identity_service.request.LoginRequest;
 import com.medsupport.identity_service.security.JWTUtils;
 import com.medsupport.identity_service.response.AuthResponse;
@@ -19,13 +20,19 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JWTUtils jwtUtils;
+    private final EmailService emailService;
+
+    @Value("${app.base-url:http://localhost:8083}")
+    private String baseUrl;
 
     public AuthService(UserRepository userRepository,
                        PasswordEncoder passwordEncoder,
-                       JWTUtils jwtUtils) {
+                       JWTUtils jwtUtils,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -61,7 +68,17 @@ public class AuthService {
         user.setVerificationToken(UUID.randomUUID().toString());
         user.setVerificationTokenExpiry(LocalDateTime.now().plusDays(1));
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        String verificationLink = baseUrl
+                + "/api/auth/verify-email?token="
+                + savedUser.getVerificationToken();
+
+        emailService.sendVerificationEmail(
+                savedUser.getEmail(),
+                verificationLink);
+
+        return savedUser;
     }
 
     @Transactional
