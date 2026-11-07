@@ -8,6 +8,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.medsupport.identity_service.request.UpdateProfileRequest;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 @RestController
 @RequestMapping("/api/users")
@@ -29,4 +33,18 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
+    @PutMapping("/me")
+    public ResponseEntity<UserResponse> updateMyProfile(
+            @Valid @RequestBody UpdateProfileRequest request,
+            Authentication authentication) {
+
+        UserResponse response = userService.updateMyProfile(
+                authentication.getName(),
+                request
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
 }
