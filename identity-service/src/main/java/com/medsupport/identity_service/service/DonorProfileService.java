@@ -109,4 +109,34 @@ public class DonorProfileService {
         return DonorProfileResponse.from(profile);
     }
 
+    @Transactional
+    public DonorProfileResponse updateMyDonorProfile(
+            String email,
+            DonorProfileRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        DonorProfile profile = donorProfileRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Donor profile not found"));
+
+        profile.setBloodType(request.getBloodType());
+        profile.setDateOfBirth(request.getDateOfBirth());
+        profile.setGender(request.getGender());
+        profile.setWeightKg(request.getWeightKg());
+        profile.setMedicalConditions(request.getMedicalConditions());
+        profile.setMedications(request.getMedications());
+        profile.setAllergies(request.getAllergies());
+        profile.setLastDonationDate(request.getLastDonationDate());
+        profile.setNotesAboutTheDonor(request.getNotesAboutTheDonor());
+
+        DonorProfile updatedProfile =
+                donorProfileRepository.save(profile);
+
+        return DonorProfileResponse.from(updatedProfile);
+    }
+
 }
