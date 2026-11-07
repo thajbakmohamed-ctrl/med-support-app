@@ -82,6 +82,25 @@ public class UserController {
         ));
     }
 
+    @PostMapping(
+            value = "/profile/image",
+            consumes = "multipart/form-data"
+    )
+    public ResponseEntity<Map<String, String>> uploadProfileImage(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) throws IOException {
+
+        userService.uploadProfileImage(
+                authentication.getName(),
+                file
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Profile image uploaded successfully"
+        ));
+    }
+
+
 
 
 }
