@@ -34,4 +34,15 @@ public class DonorProfileController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DonorProfileResponse.from(profile));
     }
+
+    @GetMapping("/me")
+    public ResponseEntity<DonorProfileResponse> getMyDonorProfile(
+            Authentication authentication) {
+
+        DonorProfileResponse response = donorProfileService
+                .getMyDonorProfile(authentication.getName());
+
+        return ResponseEntity.ok(response);
+    }
+
 }
