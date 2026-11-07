@@ -49,7 +49,11 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 Claims claims = jwtUtils.validateToken(token);
 
                 String email = claims.getSubject();
-                Long tokenUserId = claims.get("userId", Long.class);
+                Number tokenUserIdValue = claims.get("userId", Number.class);
+
+                Long tokenUserId = tokenUserIdValue == null
+                        ? null
+                        : tokenUserIdValue.longValue();
 
                 if (email != null && tokenUserId != null) {
 
