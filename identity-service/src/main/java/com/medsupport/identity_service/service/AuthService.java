@@ -7,6 +7,7 @@ import com.medsupport.identity_service.request.RegisterRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.medsupport.identity_service.request.LoginRequest;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -83,5 +84,32 @@ public class AuthService {
 
         return true;
     }
+
+    public User loginUser(LoginRequest request) {
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (user == null) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        if (!passwordEncoder.matches(
+                request.getPassword(), user.getHashedPassword())) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+
+        if (!user.isEmailVerified()) {
+            throw new IllegalStateException("Email is not verified");
+        }
+
+        if (!"ACTIVE".equals(user.getStatus())) {
+            throw new IllegalStateException("Account is not active");
+        }
+
+        return user;
+    }
+
+
 
 }
