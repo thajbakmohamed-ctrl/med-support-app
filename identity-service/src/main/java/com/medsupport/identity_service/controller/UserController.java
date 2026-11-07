@@ -12,6 +12,7 @@ import com.medsupport.identity_service.request.UpdateProfileRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 @RestController
 @RequestMapping("/api/users")
@@ -46,5 +47,17 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deactivateMyAccount(
+            Authentication authentication) {
+
+        userService.deactivateMyAccount(
+                authentication.getName()
+        );
+
+        return ResponseEntity.noContent().build();
+    }
+
 
 }
