@@ -1,18 +1,21 @@
 
 package com.medsupport.identity_service.service;
 
+import com.medsupport.identity_service.exception.ResourceConflictException;
 import com.medsupport.identity_service.model.User;
 import com.medsupport.identity_service.repository.UserRepository;
 import com.medsupport.identity_service.request.RegisterRequest;
 import com.medsupport.identity_service.request.ResetPasswordRequest;
+import com.medsupport.identity_service.request.LoginRequest;
+import com.medsupport.identity_service.request.ChangePasswordRequest;
+import com.medsupport.identity_service.security.JWTUtils;
+import com.medsupport.identity_service.response.AuthResponse;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
-import com.medsupport.identity_service.request.LoginRequest;
-import com.medsupport.identity_service.security.JWTUtils;
-import com.medsupport.identity_service.response.AuthResponse;
-import com.medsupport.identity_service.request.ChangePasswordRequest;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -27,10 +30,12 @@ public class AuthService {
     @Value("${app.base-url:http://localhost:8083}")
     private String baseUrl;
 
-    public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       JWTUtils jwtUtils,
-                       EmailService emailService) {
+    public AuthService(
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder,
+            JWTUtils jwtUtils,
+            EmailService emailService) {
+
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtils = jwtUtils;
@@ -41,16 +46,19 @@ public class AuthService {
     public User registerUser(RegisterRequest request) {
 
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new ResourceConflictException(
+                    "Email already exists");
         }
 
         if (userRepository.existsByPhoneNumber(request.getPhoneNumber())) {
-            throw new IllegalArgumentException("Phone number already exists");
+            throw new ResourceConflictException(
+                    "Phone number already exists");
         }
 
         if (request.getPhoneNumber() == null ||
                 !request.getPhoneNumber().matches("\\d{8}")) {
-            throw new IllegalArgumentException("Phone number must contain 8 digits");
+            throw new IllegalArgumentException(
+                    "Phone number must contain 8 digits");
         }
 
         if (!"DONOR".equals(request.getRole()) &&
@@ -59,16 +67,19 @@ public class AuthService {
         }
 
         User user = new User();
+
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(request.getRole());
-        user.setHashedPassword(passwordEncoder.encode(request.getPassword()));
+        user.setHashedPassword(
+                passwordEncoder.encode(request.getPassword()));
 
         user.setStatus("ACTIVE");
         user.setEmailVerified(false);
         user.setVerificationToken(UUID.randomUUID().toString());
-        user.setVerificationTokenExpiry(LocalDateTime.now().plusDays(1));
+        user.setVerificationTokenExpiry(
+                LocalDateTime.now().plusDays(1));
 
         User savedUser = userRepository.save(user);
 
@@ -78,7 +89,8 @@ public class AuthService {
 
         emailService.sendVerificationEmail(
                 savedUser.getEmail(),
-                verificationLink);
+                verificationLink
+        );
 
         return savedUser;
     }
@@ -95,7 +107,8 @@ public class AuthService {
         }
 
         if (user.getVerificationTokenExpiry() == null ||
-                user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+                !user.getVerificationTokenExpiry()
+                        .isAfter(LocalDateTime.now())) {
             return false;
         }
 
@@ -108,32 +121,40 @@ public class AuthService {
         return true;
     }
 
-
     public AuthResponse loginUser(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
 
         if (user == null) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new IllegalArgumentException(
+                    "Invalid email or password");
         }
 
         if (!passwordEncoder.matches(
-                request.getPassword(), user.getHashedPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+                request.getPassword(),
+                user.getHashedPassword())) {
+            throw new IllegalArgumentException(
+                    "Invalid email or password");
         }
 
         if (!user.isEmailVerified()) {
-            throw new IllegalStateException("Email is not verified");
+            throw new IllegalStateException(
+                    "Email is not verified");
         }
 
         if (!"ACTIVE".equals(user.getStatus())) {
-            throw new IllegalStateException("Account is not active");
+            throw new IllegalStateException(
+                    "Account is not active");
         }
 
         String token = jwtUtils.generateToken(user);
 
-        return new AuthResponse(token, user.getEmail(), user.getRole());
+        return new AuthResponse(
+                token,
+                user.getEmail(),
+                user.getRole()
+        );
     }
 
     @Transactional
@@ -147,7 +168,9 @@ public class AuthService {
             return;
         }
 
-        user.setPasswordResetToken(UUID.randomUUID().toString());
+        user.setPasswordResetToken(
+                UUID.randomUUID().toString());
+
         user.setPasswordResetTokenExpiry(
                 LocalDateTime.now().plusHours(1)
         );
@@ -168,7 +191,8 @@ public class AuthService {
     public boolean resetPassword(ResetPasswordRequest request) {
 
         User user = userRepository
-                .findByPasswordResetToken(request.getPasswordResetToken())
+                .findByPasswordResetToken(
+                        request.getPasswordResetToken())
                 .orElse(null);
 
         if (user == null) {
@@ -176,12 +200,14 @@ public class AuthService {
         }
 
         if (user.getPasswordResetTokenExpiry() == null ||
-                !user.getPasswordResetTokenExpiry().isAfter(LocalDateTime.now())) {
+                !user.getPasswordResetTokenExpiry()
+                        .isAfter(LocalDateTime.now())) {
             return false;
         }
 
         user.setHashedPassword(
-                passwordEncoder.encode(request.getNewPassword())
+                passwordEncoder.encode(
+                        request.getNewPassword())
         );
 
         user.setPasswordResetToken(null);
@@ -211,7 +237,7 @@ public class AuthService {
             return false;
         }
 
-        // Prevent using the same password again
+        // Prevent reusing the same password
         if (passwordEncoder.matches(
                 request.getNewPassword(),
                 user.getHashedPassword())) {
@@ -221,18 +247,12 @@ public class AuthService {
 
         // Hash and save the new password
         user.setHashedPassword(
-                passwordEncoder.encode(request.getNewPassword())
+                passwordEncoder.encode(
+                        request.getNewPassword())
         );
 
         userRepository.save(user);
 
         return true;
     }
-
-
-
-
-
-
-
 }
