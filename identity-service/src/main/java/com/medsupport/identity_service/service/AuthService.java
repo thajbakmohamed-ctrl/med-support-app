@@ -8,7 +8,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.medsupport.identity_service.request.LoginRequest;
-
+import com.medsupport.identity_service.security.JWTUtils;
+import com.medsupport.identity_service.response.AuthResponse;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -17,11 +18,14 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JWTUtils jwtUtils;
 
     public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       JWTUtils jwtUtils) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
     }
 
     @Transactional
@@ -85,7 +89,8 @@ public class AuthService {
         return true;
     }
 
-    public User loginUser(LoginRequest request) {
+
+    public AuthResponse loginUser(LoginRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail())
                 .orElse(null);
@@ -107,8 +112,11 @@ public class AuthService {
             throw new IllegalStateException("Account is not active");
         }
 
-        return user;
+        String token = jwtUtils.generateToken(user);
+
+        return new AuthResponse(token, user.getEmail(), user.getRole());
     }
+
 
 
 
