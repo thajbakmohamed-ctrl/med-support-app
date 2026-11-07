@@ -45,4 +45,19 @@ public class DonorProfileController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/me")
+    public ResponseEntity<DonorProfileResponse> updateMyDonorProfile(
+            @Valid @RequestBody DonorProfileRequest request,
+            Authentication authentication) {
+
+        DonorProfileResponse response =
+                donorProfileService.updateMyDonorProfile(
+                        authentication.getName(),
+                        request
+                );
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }
