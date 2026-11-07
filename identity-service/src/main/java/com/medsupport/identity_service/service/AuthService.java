@@ -4,6 +4,7 @@ package com.medsupport.identity_service.service;
 import com.medsupport.identity_service.model.User;
 import com.medsupport.identity_service.repository.UserRepository;
 import com.medsupport.identity_service.request.RegisterRequest;
+import com.medsupport.identity_service.request.ResetPasswordRequest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import com.medsupport.identity_service.request.LoginRequest;
 import com.medsupport.identity_service.security.JWTUtils;
 import com.medsupport.identity_service.response.AuthResponse;
-import com.medsupport.identity_service.request.ResetPasswordRequest;
+import com.medsupport.identity_service.request.ChangePasswordRequest;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -190,6 +191,44 @@ public class AuthService {
 
         return true;
     }
+
+    @Transactional
+    public boolean changePasswordByEmail(
+            String email,
+            ChangePasswordRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElse(null);
+
+        if (user == null) {
+            return false;
+        }
+
+        // Verify current password
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getHashedPassword())) {
+            return false;
+        }
+
+        // Prevent using the same password again
+        if (passwordEncoder.matches(
+                request.getNewPassword(),
+                user.getHashedPassword())) {
+            throw new IllegalArgumentException(
+                    "New password must be different from current password");
+        }
+
+        // Hash and save the new password
+        user.setHashedPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        userRepository.save(user);
+
+        return true;
+    }
+
 
 
 
