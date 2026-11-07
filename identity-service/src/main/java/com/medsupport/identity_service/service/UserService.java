@@ -53,4 +53,26 @@ public class UserService {
         return UserResponse.from(updatedUser);
     }
 
+    @Transactional
+    public void deactivateMyAccount(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        if ("INACTIVE".equals(user.getStatus())) {
+            return;
+        }
+
+        user.setStatus("INACTIVE");
+
+        // Invalidate outstanding verification and reset tokens
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+
+        userRepository.save(user);
+    }
+
 }
