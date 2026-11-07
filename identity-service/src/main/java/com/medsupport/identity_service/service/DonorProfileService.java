@@ -1,0 +1,95 @@
+
+package com.medsupport.identity_service.service;
+
+import com.medsupport.identity_service.model.DonorProfile;
+import com.medsupport.identity_service.model.User;
+import com.medsupport.identity_service.repository.DonorProfileRepository;
+import com.medsupport.identity_service.repository.UserRepository;
+import com.medsupport.identity_service.request.DonorProfileRequest;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class DonorProfileService {
+
+    private final DonorProfileRepository donorProfileRepository;
+    private final UserRepository userRepository;
+
+    public DonorProfileService(
+            DonorProfileRepository donorProfileRepository,
+            UserRepository userRepository) {
+        this.donorProfileRepository = donorProfileRepository;
+        this.userRepository = userRepository;
+    }
+
+    @Transactional
+    public DonorProfile createDonorProfile(
+            String email,
+            DonorProfileRequest request) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        if (!"DONOR".equals(user.getRole())) {
+            throw new IllegalArgumentException(
+                    "Only donors can create a donor profile");
+        }
+
+        if (!"ACTIVE".equals(user.getStatus())
+                || !user.isEmailVerified()) {
+            throw new IllegalArgumentException(
+                    "User account must be active and verified");
+        }
+
+        if (donorProfileRepository.existsByUserId(user.getId())) {
+            throw new IllegalArgumentException(
+                    "Donor profile already exists");
+        }
+
+        if (request == null
+                || request.getBloodType() == null
+                || request.getBloodType().isBlank()
+                || request.getDateOfBirth() == null
+                || request.getGender() == null
+                || request.getGender().isBlank()
+                || request.getWeightKg() == null
+                || request.getWeightKg() <= 0) {
+            throw new IllegalArgumentException(
+                    "Please complete all required donor information");
+        }
+
+        if (!request.getDateOfBirth()
+                .isBefore(java.time.LocalDate.now())) {
+            throw new IllegalArgumentException(
+                    "Invalid date of birth");
+        }
+
+        if (user.getCprDocument() == null
+                || user.getCprDocument().isBlank()) {
+            throw new IllegalArgumentException(
+                    "Please upload your CPR document first");
+        }
+
+        DonorProfile profile = new DonorProfile();
+
+        profile.setUser(user);
+        profile.setBloodType(request.getBloodType());
+        profile.setDateOfBirth(request.getDateOfBirth());
+        profile.setGender(request.getGender());
+        profile.setWeightKg(request.getWeightKg());
+
+        profile.setMedicalConditions(request.getMedicalConditions());
+        profile.setMedications(request.getMedications());
+        profile.setAllergies(request.getAllergies());
+        profile.setLastDonationDate(request.getLastDonationDate());
+        profile.setNotesAboutTheDonor(request.getNotesAboutTheDonor());
+
+        // Preserve original Med Support business rules
+        profile.setTotalDonations(0);
+        profile.setAvailableForBloodDonation(false);
+        profile.setCprImage(user.getCprDocument());
+
+        return donorProfileRepository.save(profile);
+    }
+}
