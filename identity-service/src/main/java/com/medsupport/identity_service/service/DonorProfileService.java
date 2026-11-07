@@ -1,14 +1,19 @@
 
 package com.medsupport.identity_service.service;
 
+import com.medsupport.identity_service.exception.ResourceConflictException;
 import com.medsupport.identity_service.model.DonorProfile;
 import com.medsupport.identity_service.model.User;
 import com.medsupport.identity_service.repository.DonorProfileRepository;
 import com.medsupport.identity_service.repository.UserRepository;
 import com.medsupport.identity_service.request.DonorProfileRequest;
+import com.medsupport.identity_service.response.DonorProfileResponse;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.medsupport.identity_service.response.DonorProfileResponse;
+
+import java.time.LocalDate;
+import java.util.NoSuchElementException;
 
 @Service
 public class DonorProfileService {
@@ -19,6 +24,7 @@ public class DonorProfileService {
     public DonorProfileService(
             DonorProfileRepository donorProfileRepository,
             UserRepository userRepository) {
+
         this.donorProfileRepository = donorProfileRepository;
         this.userRepository = userRepository;
     }
@@ -30,7 +36,7 @@ public class DonorProfileService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         if (!"DONOR".equals(user.getRole())) {
             throw new IllegalArgumentException(
@@ -44,7 +50,7 @@ public class DonorProfileService {
         }
 
         if (donorProfileRepository.existsByUserId(user.getId())) {
-            throw new IllegalArgumentException(
+            throw new ResourceConflictException(
                     "Donor profile already exists");
         }
 
@@ -56,12 +62,12 @@ public class DonorProfileService {
                 || request.getGender().isBlank()
                 || request.getWeightKg() == null
                 || request.getWeightKg() <= 0) {
+
             throw new IllegalArgumentException(
                     "Please complete all required donor information");
         }
 
-        if (!request.getDateOfBirth()
-                .isBefore(java.time.LocalDate.now())) {
+        if (!request.getDateOfBirth().isBefore(LocalDate.now())) {
             throw new IllegalArgumentException(
                     "Invalid date of birth");
         }
@@ -99,12 +105,13 @@ public class DonorProfileService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         DonorProfile profile = donorProfileRepository
                 .findByUserId(user.getId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Donor profile not found"));
+                        new NoSuchElementException(
+                                "Donor profile not found"));
 
         return DonorProfileResponse.from(profile);
     }
@@ -116,17 +123,29 @@ public class DonorProfileService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         DonorProfile profile = donorProfileRepository
                 .findByUserId(user.getId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("Donor profile not found"));
+                        new NoSuchElementException(
+                                "Donor profile not found"));
+
+        if (!"DONOR".equals(user.getRole())) {
+            throw new IllegalArgumentException(
+                    "Only donors can update a donor profile");
+        }
+
+        if (request == null) {
+            throw new IllegalArgumentException(
+                    "Donor profile information is required");
+        }
 
         profile.setBloodType(request.getBloodType());
         profile.setDateOfBirth(request.getDateOfBirth());
         profile.setGender(request.getGender());
         profile.setWeightKg(request.getWeightKg());
+
         profile.setMedicalConditions(request.getMedicalConditions());
         profile.setMedications(request.getMedications());
         profile.setAllergies(request.getAllergies());
@@ -138,5 +157,4 @@ public class DonorProfileService {
 
         return DonorProfileResponse.from(updatedProfile);
     }
-
 }

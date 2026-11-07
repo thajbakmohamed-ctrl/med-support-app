@@ -61,5 +61,13 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(ResourceConflictException.class)
+    public ResponseEntity<Map<String, String>> handleResourceConflict(
+            ResourceConflictException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
 
 }
