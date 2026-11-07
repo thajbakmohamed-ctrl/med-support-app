@@ -37,6 +37,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/auth/verify-email").permitAll()
                         .anyRequest().authenticated()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/forgot-password",
+                                "/api/auth/reset-password").permitAll()
                 )
                 .addFilterBefore(
                         jwtRequestFilter,
