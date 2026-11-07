@@ -70,4 +70,16 @@ public class GlobalExceptionHandler {
     }
 
 
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, String>> handleForbidden(
+            IllegalStateException ex) {
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of(
+                        "error", ex.getMessage()
+                ));
+    }
+
+
+
 }
