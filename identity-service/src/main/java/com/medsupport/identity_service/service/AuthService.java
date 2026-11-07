@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import com.medsupport.identity_service.request.LoginRequest;
 import com.medsupport.identity_service.security.JWTUtils;
 import com.medsupport.identity_service.response.AuthResponse;
+import com.medsupport.identity_service.request.ResetPasswordRequest;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -161,6 +162,35 @@ public class AuthService {
                 resetLink
         );
     }
+
+    @Transactional
+    public boolean resetPassword(ResetPasswordRequest request) {
+
+        User user = userRepository
+                .findByPasswordResetToken(request.getPasswordResetToken())
+                .orElse(null);
+
+        if (user == null) {
+            return false;
+        }
+
+        if (user.getPasswordResetTokenExpiry() == null ||
+                !user.getPasswordResetTokenExpiry().isAfter(LocalDateTime.now())) {
+            return false;
+        }
+
+        user.setHashedPassword(
+                passwordEncoder.encode(request.getNewPassword())
+        );
+
+        user.setPasswordResetToken(null);
+        user.setPasswordResetTokenExpiry(null);
+
+        userRepository.save(user);
+
+        return true;
+    }
+
 
 
 
