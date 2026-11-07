@@ -49,6 +49,10 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/auth/verify-email"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/reset-password.html"
+                        ).permitAll()
 
                         // All other endpoints require JWT
                         .anyRequest().authenticated()

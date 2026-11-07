@@ -73,13 +73,15 @@ public class AuthService {
         user.setPhoneNumber(request.getPhoneNumber());
         user.setRole(request.getRole());
         user.setHashedPassword(
-                passwordEncoder.encode(request.getPassword()));
+                passwordEncoder.encode(request.getPassword())
+        );
 
         user.setStatus("ACTIVE");
         user.setEmailVerified(false);
         user.setVerificationToken(UUID.randomUUID().toString());
         user.setVerificationTokenExpiry(
-                LocalDateTime.now().plusDays(1));
+                LocalDateTime.now().plusDays(1)
+        );
 
         User savedUser = userRepository.save(user);
 
@@ -169,7 +171,8 @@ public class AuthService {
         }
 
         user.setPasswordResetToken(
-                UUID.randomUUID().toString());
+                UUID.randomUUID().toString()
+        );
 
         user.setPasswordResetTokenExpiry(
                 LocalDateTime.now().plusHours(1)
@@ -177,8 +180,9 @@ public class AuthService {
 
         userRepository.save(user);
 
+        // Open the password reset HTML page
         String resetLink = baseUrl
-                + "/api/auth/reset-password?token="
+                + "/reset-password.html?token="
                 + user.getPasswordResetToken();
 
         emailService.sendPasswordResetEmail(
@@ -207,7 +211,8 @@ public class AuthService {
 
         user.setHashedPassword(
                 passwordEncoder.encode(
-                        request.getNewPassword())
+                        request.getNewPassword()
+                )
         );
 
         user.setPasswordResetToken(null);
@@ -245,7 +250,6 @@ public class AuthService {
                     "New password must be different from current password");
         }
 
-        // Hash and save the new password
         user.setHashedPassword(
                 passwordEncoder.encode(
                         request.getNewPassword())
