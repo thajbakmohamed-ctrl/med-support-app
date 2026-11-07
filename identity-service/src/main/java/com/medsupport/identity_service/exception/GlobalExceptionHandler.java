@@ -38,4 +38,28 @@ public class GlobalExceptionHandler {
                         "error", message
                 ));
     }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleConflict(
+            org.springframework.dao.DataIntegrityViolationException ex) {
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "error", "A record with these details already exists"
+                ));
+    }
+
+    @ExceptionHandler(java.util.NoSuchElementException.class)
+    public ResponseEntity<Map<String, String>> handleNotFound(
+            java.util.NoSuchElementException ex) {
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of(
+                        "error", ex.getMessage() == null
+                                ? "Resource not found"
+                                : ex.getMessage()
+                ));
+    }
+
+
 }
