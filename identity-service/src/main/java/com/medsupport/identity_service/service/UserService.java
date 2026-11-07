@@ -6,6 +6,7 @@ import com.medsupport.identity_service.model.User;
 import com.medsupport.identity_service.repository.UserRepository;
 import com.medsupport.identity_service.request.UpdateProfileRequest;
 import com.medsupport.identity_service.response.UserResponse;
+import com.medsupport.identity_service.util.FileValidationUtil;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -53,7 +54,6 @@ public class UserService {
 
         String newPhoneNumber = request.getPhoneNumber();
 
-        // Check uniqueness only if phone number has changed
         if (!user.getPhoneNumber().equals(newPhoneNumber)
                 && userRepository.existsByPhoneNumber(newPhoneNumber)) {
             throw new ResourceConflictException(
@@ -82,7 +82,6 @@ public class UserService {
 
         user.setStatus("INACTIVE");
 
-        // Invalidate outstanding verification and reset tokens
         user.setVerificationToken(null);
         user.setVerificationTokenExpiry(null);
         user.setPasswordResetToken(null);
@@ -106,29 +105,8 @@ public class UserService {
                     "Only donors can upload CPR documents");
         }
 
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "CPR document is required");
-        }
-
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException(
-                    "Maximum file size is 5 MB");
-        }
-
-        String contentType = file.getContentType();
-        String extension;
-
-        if ("application/pdf".equals(contentType)) {
-            extension = ".pdf";
-        } else if ("image/jpeg".equals(contentType)) {
-            extension = ".jpg";
-        } else if ("image/png".equals(contentType)) {
-            extension = ".png";
-        } else {
-            throw new IllegalArgumentException(
-                    "Only PDF, JPG and PNG files are allowed");
-        }
+        String extension =
+                FileValidationUtil.validateFile(file, true);
 
         Path folder = Path.of(uploadDir, "cpr")
                 .toAbsolutePath()
@@ -141,8 +119,10 @@ public class UserService {
 
         try {
             file.transferTo(filePath);
+
             user.setCprDocument(filePath.toString());
             userRepository.save(user);
+
         } catch (IOException | RuntimeException ex) {
             Files.deleteIfExists(filePath);
             throw ex;
@@ -159,27 +139,8 @@ public class UserService {
                 .orElseThrow(() ->
                         new NoSuchElementException("User not found"));
 
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "Profile image is required");
-        }
-
-        if (file.getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException(
-                    "Maximum file size is 5 MB");
-        }
-
-        String contentType = file.getContentType();
-        String extension;
-
-        if ("image/jpeg".equals(contentType)) {
-            extension = ".jpg";
-        } else if ("image/png".equals(contentType)) {
-            extension = ".png";
-        } else {
-            throw new IllegalArgumentException(
-                    "Only JPG and PNG images are allowed");
-        }
+        String extension =
+                FileValidationUtil.validateFile(file, false);
 
         Path folder = Path.of(uploadDir, "profile")
                 .toAbsolutePath()
@@ -192,8 +153,10 @@ public class UserService {
 
         try {
             file.transferTo(filePath);
+
             user.setProfileImage(filePath.toString());
             userRepository.save(user);
+
         } catch (IOException | RuntimeException ex) {
             Files.deleteIfExists(filePath);
             throw ex;
