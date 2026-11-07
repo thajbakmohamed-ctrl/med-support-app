@@ -2,10 +2,10 @@
 package com.medsupport.identity_service.config;
 
 import com.medsupport.identity_service.security.JwtRequestFilter;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,19 +28,32 @@ public class SecurityConfig {
 
         http
                 .csrf(csrf -> csrf.disable())
+
                 .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS))
+
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST,
+
+                        // Public authentication endpoints
+                        .requestMatchers(
+                                HttpMethod.POST,
                                 "/api/auth/register",
-                                "/api/auth/login").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/auth/verify-email").permitAll()
-                        .anyRequest().authenticated()
-                        .requestMatchers(HttpMethod.POST,
+                                "/api/auth/login",
                                 "/api/auth/forgot-password",
-                                "/api/auth/reset-password").permitAll()
+                                "/api/auth/reset-password"
+                        ).permitAll()
+
+                        // Email verification
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/auth/verify-email"
+                        ).permitAll()
+
+                        // All other endpoints require JWT
+                        .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(
                         jwtRequestFilter,
                         UsernamePasswordAuthenticationFilter.class
