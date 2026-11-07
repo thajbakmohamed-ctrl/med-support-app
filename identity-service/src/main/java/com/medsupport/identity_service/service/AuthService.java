@@ -134,6 +134,35 @@ public class AuthService {
         return new AuthResponse(token, user.getEmail(), user.getRole());
     }
 
+    @Transactional
+    public void forgotPassword(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElse(null);
+
+        // Do not reveal whether this email is registered
+        if (user == null) {
+            return;
+        }
+
+        user.setPasswordResetToken(UUID.randomUUID().toString());
+        user.setPasswordResetTokenExpiry(
+                LocalDateTime.now().plusHours(1)
+        );
+
+        userRepository.save(user);
+
+        String resetLink = baseUrl
+                + "/api/auth/reset-password?token="
+                + user.getPasswordResetToken();
+
+        emailService.sendPasswordResetEmail(
+                user.getEmail(),
+                resetLink
+        );
+    }
+
+
 
 
 
