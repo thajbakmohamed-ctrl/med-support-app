@@ -1,6 +1,8 @@
 
 package com.medsupport.identity_service.security;
 
+import com.medsupport.identity_service.model.User;
+import com.medsupport.identity_service.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -19,9 +21,13 @@ import java.util.List;
 public class JwtRequestFilter extends OncePerRequestFilter {
 
     private final JWTUtils jwtUtils;
+    private final UserRepository userRepository;
 
-    public JwtRequestFilter(JWTUtils jwtUtils) {
+    public JwtRequestFilter(
+            JWTUtils jwtUtils,
+            UserRepository userRepository) {
         this.jwtUtils = jwtUtils;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -33,9 +39,9 @@ public class JwtRequestFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        if (authHeader != null &&
-                authHeader.startsWith("Bearer ") &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (authHeader != null
+                && authHeader.startsWith("Bearer ")
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
 
             String token = authHeader.substring(7);
 
@@ -43,21 +49,33 @@ public class JwtRequestFilter extends OncePerRequestFilter {
                 Claims claims = jwtUtils.validateToken(token);
 
                 String email = claims.getSubject();
-                String role = claims.get("role", String.class);
+                Long tokenUserId = claims.get("userId", Long.class);
 
-                if (email != null && role != null) {
+                if (email != null && tokenUserId != null) {
 
-                    var authorities = List.of(
-                            new SimpleGrantedAuthority("ROLE_" + role)
-                    );
+                    User user = userRepository.findByEmail(email)
+                            .orElse(null);
 
-                    var authentication =
-                            new UsernamePasswordAuthenticationToken(
-                                    email, null, authorities
-                            );
+                    if (user != null
+                            && user.getId().equals(tokenUserId)
+                            && "ACTIVE".equals(user.getStatus())
+                            && user.isEmailVerified()) {
 
-                    SecurityContextHolder.getContext()
-                            .setAuthentication(authentication);
+                        var authorities = List.of(
+                                new SimpleGrantedAuthority(
+                                        "ROLE_" + user.getRole())
+                        );
+
+                        var authentication =
+                                new UsernamePasswordAuthenticationToken(
+                                        user.getEmail(),
+                                        null,
+                                        authorities
+                                );
+
+                        SecurityContextHolder.getContext()
+                                .setAuthentication(authentication);
+                    }
                 }
 
             } catch (Exception ex) {
