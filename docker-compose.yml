@@ -24,6 +24,8 @@ services:
   postgres_db:
     image: postgres:17
     container_name: med-support-postgres
+    ports:
+      - "127.0.0.1:5433:5432"
     environment:
       POSTGRES_DB: med_support_docker
       POSTGRES_USER: postgres
