@@ -139,5 +139,56 @@ public class UserService {
         }
     }
 
+    @Transactional
+    public void uploadProfileImage(
+            String email,
+            MultipartFile file) throws IOException {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "Profile image is required");
+        }
+
+        if (file.getSize() > 5 * 1024 * 1024) {
+            throw new IllegalArgumentException(
+                    "Maximum file size is 5 MB");
+        }
+
+        String contentType = file.getContentType();
+        String extension;
+
+        if ("image/jpeg".equals(contentType)) {
+            extension = ".jpg";
+        } else if ("image/png".equals(contentType)) {
+            extension = ".png";
+        } else {
+            throw new IllegalArgumentException(
+                    "Only JPG and PNG images are allowed");
+        }
+
+        Path folder = Path.of(uploadDir, "profile")
+                .toAbsolutePath()
+                .normalize();
+
+        Files.createDirectories(folder);
+
+        String fileName = UUID.randomUUID() + extension;
+        Path filePath = folder.resolve(fileName);
+
+        try {
+            file.transferTo(filePath);
+            user.setProfileImage(filePath.toString());
+            userRepository.save(user);
+        } catch (IOException | RuntimeException ex) {
+            Files.deleteIfExists(filePath);
+            throw ex;
+        }
+    }
+
+
 
 }
