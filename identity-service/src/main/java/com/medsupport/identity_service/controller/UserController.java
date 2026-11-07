@@ -13,6 +13,11 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.IOException;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -58,6 +63,25 @@ public class UserController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping(
+            value = "/profile/cpr",
+            consumes = "multipart/form-data"
+    )
+    public ResponseEntity<Map<String, String>> uploadCprDocument(
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication) throws IOException {
+
+        userService.uploadCprDocument(
+                authentication.getName(),
+                file
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", "CPR document uploaded successfully"
+        ));
+    }
+
 
 
 }
