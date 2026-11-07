@@ -8,6 +8,7 @@ import com.medsupport.identity_service.repository.UserRepository;
 import com.medsupport.identity_service.request.DonorProfileRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.medsupport.identity_service.response.DonorProfileResponse;
 
 @Service
 public class DonorProfileService {
@@ -92,4 +93,20 @@ public class DonorProfileService {
 
         return donorProfileRepository.save(profile);
     }
+
+    @Transactional(readOnly = true)
+    public DonorProfileResponse getMyDonorProfile(String email) {
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User not found"));
+
+        DonorProfile profile = donorProfileRepository
+                .findByUserId(user.getId())
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Donor profile not found"));
+
+        return DonorProfileResponse.from(profile);
+    }
+
 }
