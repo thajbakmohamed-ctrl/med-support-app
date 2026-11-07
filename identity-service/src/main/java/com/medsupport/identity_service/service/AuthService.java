@@ -58,4 +58,30 @@ public class AuthService {
 
         return userRepository.save(user);
     }
+
+    @Transactional
+    public boolean verifyEmail(String verificationToken) {
+
+        User user = userRepository
+                .findByVerificationToken(verificationToken)
+                .orElse(null);
+
+        if (user == null) {
+            return false;
+        }
+
+        if (user.getVerificationTokenExpiry() == null ||
+                user.getVerificationTokenExpiry().isBefore(LocalDateTime.now())) {
+            return false;
+        }
+
+        user.setEmailVerified(true);
+        user.setVerificationToken(null);
+        user.setVerificationTokenExpiry(null);
+
+        userRepository.save(user);
+
+        return true;
+    }
+
 }
