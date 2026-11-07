@@ -1,39 +1,47 @@
 
 package com.medsupport.identity_service.service;
 
+import com.medsupport.identity_service.exception.ResourceConflictException;
 import com.medsupport.identity_service.model.User;
 import com.medsupport.identity_service.repository.UserRepository;
-import com.medsupport.identity_service.response.UserResponse;
 import com.medsupport.identity_service.request.UpdateProfileRequest;
+import com.medsupport.identity_service.response.UserResponse;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.io.IOException;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
+
     public UserService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
+    // Get current user's profile
     @Transactional(readOnly = true)
     public UserResponse getMyProfile(String email) {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         return UserResponse.from(user);
     }
 
+    // Update current user's profile
     @Transactional
     public UserResponse updateMyProfile(
             String email,
@@ -41,14 +49,14 @@ public class UserService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         String newPhoneNumber = request.getPhoneNumber();
 
         // Check uniqueness only if phone number has changed
         if (!user.getPhoneNumber().equals(newPhoneNumber)
                 && userRepository.existsByPhoneNumber(newPhoneNumber)) {
-            throw new IllegalArgumentException(
+            throw new ResourceConflictException(
                     "Phone number already exists");
         }
 
@@ -60,12 +68,13 @@ public class UserService {
         return UserResponse.from(updatedUser);
     }
 
+    // Deactivate current user's account
     @Transactional
     public void deactivateMyAccount(String email) {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         if ("INACTIVE".equals(user.getStatus())) {
             return;
@@ -82,6 +91,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Upload CPR document
     @Transactional
     public void uploadCprDocument(
             String email,
@@ -89,7 +99,7 @@ public class UserService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         if (!"DONOR".equals(user.getRole())) {
             throw new IllegalArgumentException(
@@ -139,6 +149,7 @@ public class UserService {
         }
     }
 
+    // Upload profile image
     @Transactional
     public void uploadProfileImage(
             String email,
@@ -146,7 +157,7 @@ public class UserService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("User not found"));
+                        new NoSuchElementException("User not found"));
 
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException(
@@ -188,7 +199,4 @@ public class UserService {
             throw ex;
         }
     }
-
-
-
 }
