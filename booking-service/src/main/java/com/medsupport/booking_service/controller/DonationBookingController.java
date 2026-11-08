@@ -12,6 +12,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import java.util.List;
 
 @RestController
@@ -32,19 +34,39 @@ public class DonationBookingController {
         this.bloodRequestClient = bloodRequestClient;
     }
 
+    // Check JWT before calling other microservices
+    private String requireBearerToken(String bearerToken) {
+
+        if (bearerToken == null
+                || !bearerToken.startsWith("Bearer ")
+                || bearerToken.substring(7).isBlank()) {
+
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication token is required"
+            );
+        }
+
+        return bearerToken;
+    }
+
+    // Create donation booking
     @PostMapping
     public ResponseEntity<DonationBookingResponse> createBooking(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @RequestHeader(
+                    value = HttpHeaders.AUTHORIZATION,
+                    required = false
+            ) String bearerToken,
             @Valid @RequestBody DonationBookingRequest request) {
 
-        var donor = identityClient.getMyDonorProfile(bearerToken);
+        requireBearerToken(bearerToken);
 
+        var donor = identityClient.getMyDonorProfile(bearerToken);
 
         var bloodRequest = bloodRequestClient.getBloodRequest(
                 request.getBloodRequestId(),
                 bearerToken
         );
-
 
         DonationBookingResponse response = bookingService.createBooking(
                 request,
@@ -59,38 +81,59 @@ public class DonationBookingController {
                 .body(response);
     }
 
+    // Cancel donor's own booking
     @DeleteMapping("/{bookingId}")
     public ResponseEntity<DonationBookingResponse> cancelBooking(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @RequestHeader(
+                    value = HttpHeaders.AUTHORIZATION,
+                    required = false
+            ) String bearerToken,
             @PathVariable Long bookingId) {
+
+        requireBearerToken(bearerToken);
 
         var donor = identityClient.getMyDonorProfile(bearerToken);
 
-
         DonationBookingResponse response = bookingService.cancelBooking(
-                bookingId, donor.id());
+                bookingId,
+                donor.id()
+        );
 
         return ResponseEntity.ok(response);
     }
 
+    // Update booking status by hospital staff
     @PutMapping("/{bookingId}/status")
     public ResponseEntity<DonationBookingResponse> updateBookingStatus(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @RequestHeader(
+                    value = HttpHeaders.AUTHORIZATION,
+                    required = false
+            ) String bearerToken,
             @PathVariable Long bookingId,
             @RequestParam String status) {
 
+        requireBearerToken(bearerToken);
+
         var staff = identityClient.getMyHospitalStaffInfo(bearerToken);
 
-
         DonationBookingResponse response = bookingService.updateBookingStatus(
-                bookingId, status, staff.hospitalId());
+                bookingId,
+                status,
+                staff.hospitalId()
+        );
 
         return ResponseEntity.ok(response);
     }
 
+    // View authenticated donor's bookings
     @GetMapping("/my")
     public ResponseEntity<List<DonationBookingResponse>> getMyBookings(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken) {
+            @RequestHeader(
+                    value = HttpHeaders.AUTHORIZATION,
+                    required = false
+            ) String bearerToken) {
+
+        requireBearerToken(bearerToken);
 
         var donor = identityClient.getMyDonorProfile(bearerToken);
 
@@ -99,10 +142,16 @@ public class DonationBookingController {
         );
     }
 
+    // View bookings for a blood request (hospital staff only)
     @GetMapping("/blood-request/{bloodRequestId}")
     public ResponseEntity<List<DonationBookingResponse>> getBookingsByBloodRequest(
-            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @RequestHeader(
+                    value = HttpHeaders.AUTHORIZATION,
+                    required = false
+            ) String bearerToken,
             @PathVariable Long bloodRequestId) {
+
+        requireBearerToken(bearerToken);
 
         var staff = identityClient.getMyHospitalStaffInfo(bearerToken);
 
@@ -112,7 +161,7 @@ public class DonationBookingController {
         );
 
         if (!staff.hospitalId().equals(bloodRequest.hospitalId())) {
-            throw new org.springframework.web.server.ResponseStatusException(
+            throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You cannot view another hospital's bookings"
             );
@@ -122,7 +171,4 @@ public class DonationBookingController {
                 bookingService.getBookingsByBloodRequest(bloodRequestId)
         );
     }
-
-
-
 }

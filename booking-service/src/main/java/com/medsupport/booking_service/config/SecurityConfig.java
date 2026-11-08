@@ -24,28 +24,40 @@ public class SecurityConfig {
                 )
                 .httpBasic(basic -> basic.disable())
                 .formLogin(form -> form.disable())
-
                 .authorizeHttpRequests(auth -> auth
+
                         .requestMatchers(
-                                "/actuator/health"
+                                "/actuator/health",
+                                "/error"
                         ).permitAll()
+
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/donation-bookings"
-                        ).permitAll().anyRequest().denyAll().requestMatchers(
-                                "/api/donation-slots",
-                                "/api/donation-slots/**"
-                        ).permitAll().requestMatchers(
+                        ).permitAll()
+
+                        .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/donation-bookings/*"
-                        ).permitAll().requestMatchers(
+                        ).permitAll()
+
+                        .requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/donation-bookings/*/status"
-                        ).permitAll().requestMatchers(
+                        ).permitAll()
+
+                        .requestMatchers(
                                 HttpMethod.GET,
                                 "/api/donation-bookings/my",
                                 "/api/donation-bookings/blood-request/*"
                         ).permitAll()
+
+                        .requestMatchers(
+                                "/api/donation-slots",
+                                "/api/donation-slots/**"
+                        ).permitAll()
+
+                        .anyRequest().denyAll()
                 );
 
         return http.build();
