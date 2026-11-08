@@ -233,4 +233,93 @@ public class DonationBookingService {
         return DonationBookingResponse.from(savedBooking);
     }
 
+    @Transactional
+    public DonationBookingResponse updateBookingStatus(
+            Long bookingId,
+            String newStatus,
+            Long verifiedHospitalId) {
+
+        if (bookingId == null
+                || verifiedHospitalId == null
+                || newStatus == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Required information is missing");
+        }
+
+        // Read the booking to identify its slot.
+        DonationBooking existingBooking = bookingRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found"));
+
+        // Lock slot first, matching cancellation lock order.
+        DonationSlot slot = slotRepository
+                .findByIdForUpdate(
+                        existingBooking.getDonationSlot().getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Donation slot not found"));
+
+        // Lock booking before updating status.
+        DonationBooking booking = bookingRepository
+                .findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found"));
+
+        if (!slot.getId().equals(booking.getDonationSlot().getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Booking slot changed during processing");
+        }
+
+        if (!slot.getHospitalId().equals(verifiedHospitalId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You cannot update another hospital's booking");
+        }
+
+        String currentStatus = booking.getDonationBookingStatus();
+
+        boolean validTransition = switch (currentStatus) {
+            case "PENDING" ->
+                    newStatus.equals("CONFIRMED")
+                            || newStatus.equals("CANCELLED");
+
+            case "CONFIRMED" ->
+                    newStatus.equals("COMPLETED")
+                            || newStatus.equals("CANCELLED");
+
+            default -> false;
+        };
+
+        if (!validTransition) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Invalid booking status transition");
+        }
+
+
+        if ("CANCELLED".equals(newStatus)) {
+            if (slot.getReservedCount() <= 0) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Invalid slot reservation count");
+            }
+
+            slot.setReservedCount(slot.getReservedCount() - 1);
+            slotRepository.save(slot);
+        }
+
+        booking.setDonationBookingStatus(newStatus);
+
+        DonationBooking savedBooking =
+                bookingRepository.saveAndFlush(booking);
+
+        return DonationBookingResponse.from(savedBooking);
+    }
+
+
 }
