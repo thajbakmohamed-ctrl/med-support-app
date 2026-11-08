@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 public class DonationBookingService {
@@ -320,6 +321,29 @@ public class DonationBookingService {
 
         return DonationBookingResponse.from(savedBooking);
     }
+
+    @Transactional(readOnly = true)
+    public List<DonationBookingResponse> getBookingsByDonor(
+            Long verifiedDonorProfileId) {
+
+        return bookingRepository.findByDonorProfileId(
+                        verifiedDonorProfileId
+                ).stream()
+                .map(DonationBookingResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DonationBookingResponse> getBookingsByBloodRequest(
+            Long bloodRequestId) {
+
+        return bookingRepository.findByBloodRequestId(
+                        bloodRequestId
+                ).stream()
+                .map(DonationBookingResponse::from)
+                .toList();
+    }
+
 
 
 }

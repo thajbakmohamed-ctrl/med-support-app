@@ -41,6 +41,10 @@ public class SecurityConfig {
                         ).permitAll().requestMatchers(
                                 HttpMethod.PUT,
                                 "/api/donation-bookings/*/status"
+                        ).permitAll().requestMatchers(
+                                HttpMethod.GET,
+                                "/api/donation-bookings/my",
+                                "/api/donation-bookings/blood-request/*"
                         ).permitAll()
                 );
 

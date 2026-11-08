@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/donation-bookings")
@@ -86,6 +87,42 @@ public class DonationBookingController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<DonationBookingResponse>> getMyBookings(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken) {
+
+        var donor = identityClient.getMyDonorProfile(bearerToken);
+
+        return ResponseEntity.ok(
+                bookingService.getBookingsByDonor(donor.id())
+        );
+    }
+
+    @GetMapping("/blood-request/{bloodRequestId}")
+    public ResponseEntity<List<DonationBookingResponse>> getBookingsByBloodRequest(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @PathVariable Long bloodRequestId) {
+
+        var staff = identityClient.getMyHospitalStaffInfo(bearerToken);
+
+        var bloodRequest = bloodRequestClient.getBloodRequest(
+                bloodRequestId,
+                bearerToken
+        );
+
+        if (!staff.hospitalId().equals(bloodRequest.hospitalId())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You cannot view another hospital's bookings"
+            );
+        }
+
+        return ResponseEntity.ok(
+                bookingService.getBookingsByBloodRequest(bloodRequestId)
+        );
+    }
+
 
 
 }
