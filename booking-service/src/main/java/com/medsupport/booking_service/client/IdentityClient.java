@@ -64,4 +64,77 @@ public class IdentityClient {
 
     public record DonorProfileInfo(Long id) {
     }
+
+
+    public HospitalStaffInfo getMyHospitalStaffInfo(
+            String bearerToken) {
+
+        if (bearerToken == null
+                || !bearerToken.startsWith("Bearer ")) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "Authentication token is required"
+            );
+        }
+
+        try {
+            UserInfo user = restClient.get()
+                    .uri("/api/users/me")
+                    .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                    .retrieve()
+                    .body(UserInfo.class);
+
+            if (user == null || user.role() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_GATEWAY,
+                        "Invalid Identity Service response"
+                );
+            }
+
+            if (!"HOSPITAL_STAFF".equals(user.role())) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Only hospital staff can manage donation slots"
+                );
+            }
+
+            if (user.hospitalId() == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.FORBIDDEN,
+                        "Hospital staff account is not linked to a hospital"
+                );
+            }
+
+            return new HospitalStaffInfo(user.hospitalId());
+
+        } catch (RestClientResponseException ex) {
+            if (ex.getStatusCode().value() == 401
+                    || ex.getStatusCode().value() == 403) {
+                throw new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "Invalid or expired authentication token"
+                );
+            }
+
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_GATEWAY,
+                    "Identity Service could not verify hospital staff"
+            );
+
+        } catch (org.springframework.web.client.RestClientException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Identity Service is unavailable"
+            );
+        }
+    }
+
+    public record UserInfo(
+            Long id,
+            String role,
+            Long hospitalId
+    ) {}
+
+    public record HospitalStaffInfo(Long hospitalId) {}
+
 }
