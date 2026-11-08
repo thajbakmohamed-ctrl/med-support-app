@@ -32,7 +32,10 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST,
                                 "/api/donation-bookings"
-                        ).permitAll().anyRequest().denyAll()
+                        ).permitAll().anyRequest().denyAll().requestMatchers(
+                                "/api/donation-slots",
+                                "/api/donation-slots/**"
+                        ).permitAll()
                 );
 
         return http.build();
