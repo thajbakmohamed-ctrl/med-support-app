@@ -35,6 +35,9 @@ public class SecurityConfig {
                         ).permitAll().anyRequest().denyAll().requestMatchers(
                                 "/api/donation-slots",
                                 "/api/donation-slots/**"
+                        ).permitAll().requestMatchers(
+                                HttpMethod.DELETE,
+                                "/api/donation-bookings/*"
                         ).permitAll()
                 );
 

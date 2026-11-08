@@ -57,4 +57,19 @@ public class DonationBookingController {
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
+
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<DonationBookingResponse> cancelBooking(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @PathVariable Long bookingId) {
+
+        var donor = identityClient.getMyDonorProfile(bearerToken);
+
+
+        DonationBookingResponse response = bookingService.cancelBooking(
+                bookingId, donor.id());
+
+        return ResponseEntity.ok(response);
+    }
+
 }
