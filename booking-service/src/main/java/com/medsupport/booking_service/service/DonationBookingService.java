@@ -157,4 +157,80 @@ public class DonationBookingService {
 
         return DonationBookingResponse.from(savedBooking);
     }
+
+    @Transactional
+    public DonationBookingResponse cancelBooking(
+            Long bookingId,
+            Long verifiedDonorProfileId) {
+
+        if (bookingId == null || verifiedDonorProfileId == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Booking ID and donor profile are required");
+        }
+
+
+        DonationBooking existingBooking = bookingRepository
+                .findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found"));
+
+        if (!existingBooking.getDonorProfileId()
+                .equals(verifiedDonorProfileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You cannot cancel another donor's booking");
+        }
+
+
+        DonationSlot slot = slotRepository
+                .findByIdForUpdate(
+                        existingBooking.getDonationSlot().getId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Donation slot not found"));
+
+
+        DonationBooking booking = bookingRepository
+                .findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Booking not found"));
+
+        if (!booking.getDonorProfileId()
+                .equals(verifiedDonorProfileId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You cannot cancel another donor's booking");
+        }
+
+        if ("CANCELLED".equals(booking.getDonationBookingStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Booking is already cancelled");
+        }
+
+        if ("COMPLETED".equals(booking.getDonationBookingStatus())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Completed bookings cannot be cancelled");
+        }
+
+        if (slot.getReservedCount() <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Invalid slot reservation count");
+        }
+
+        booking.setDonationBookingStatus("CANCELLED");
+        slot.setReservedCount(slot.getReservedCount() - 1);
+
+        slotRepository.save(slot);
+        DonationBooking savedBooking =
+                bookingRepository.saveAndFlush(booking);
+
+        return DonationBookingResponse.from(savedBooking);
+    }
+
 }
