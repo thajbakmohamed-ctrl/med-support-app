@@ -72,4 +72,20 @@ public class DonationBookingController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{bookingId}/status")
+    public ResponseEntity<DonationBookingResponse> updateBookingStatus(
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearerToken,
+            @PathVariable Long bookingId,
+            @RequestParam String status) {
+
+        var staff = identityClient.getMyHospitalStaffInfo(bearerToken);
+
+
+        DonationBookingResponse response = bookingService.updateBookingStatus(
+                bookingId, status, staff.hospitalId());
+
+        return ResponseEntity.ok(response);
+    }
+
+
 }

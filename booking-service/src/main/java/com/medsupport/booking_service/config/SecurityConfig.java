@@ -38,6 +38,9 @@ public class SecurityConfig {
                         ).permitAll().requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/donation-bookings/*"
+                        ).permitAll().requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/donation-bookings/*/status"
                         ).permitAll()
                 );
 
