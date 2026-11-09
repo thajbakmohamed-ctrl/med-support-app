@@ -8,6 +8,9 @@ import com.medsupport.booking_service.repository.DonationSlotRepository;
 import com.medsupport.booking_service.request.DonationBookingRequest;
 import com.medsupport.booking_service.response.DonationBookingResponse;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +23,9 @@ import java.util.List;
 @Service
 public class DonationBookingService {
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private final DonationBookingRepository bookingRepository;
     private final DonationSlotRepository slotRepository;
 
@@ -31,8 +37,6 @@ public class DonationBookingService {
         this.slotRepository = slotRepository;
     }
 
-    // Internal method: call only after checking donor ownership
-    // and blood request details with their owning services.
     @Transactional
     public DonationBookingResponse createBooking(
             DonationBookingRequest request,
@@ -68,7 +72,13 @@ public class DonationBookingService {
                     "You cannot book for another donor");
         }
 
-        // Lock the slot before checking capacity.
+
+        entityManager.createNativeQuery(
+                        "SELECT pg_advisory_xact_lock(:donorId)")
+                .setParameter("donorId", verifiedDonorProfileId)
+                .getSingleResult();
+
+
         DonationSlot slot = slotRepository
                 .findByIdForUpdate(request.getDonationSlotId())
                 .orElseThrow(() ->
@@ -121,12 +131,11 @@ public class DonationBookingService {
                     "Donation slot is not open");
         }
 
+
         boolean alreadyBooked = bookingRepository
                 .existsByDonorProfileIdAndDonationBookingDateAndDonationBookingTimeAndDonationBookingStatusNot(
-                        verifiedDonorProfileId,
-                        bookingDate,
-                        bookingTime,
-                        "CANCELLED");
+                        verifiedDonorProfileId, bookingDate,
+                        bookingTime, "CANCELLED");
 
         if (alreadyBooked) {
             throw new ResponseStatusException(
@@ -149,15 +158,16 @@ public class DonationBookingService {
         booking.setDonationBookingTime(bookingTime);
         booking.setDonationBookingStatus("PENDING");
 
+
         slot.setReservedCount(slot.getReservedCount() + 1);
 
         slotRepository.save(slot);
 
-        DonationBooking savedBooking =
-                bookingRepository.saveAndFlush(booking);
+        DonationBooking savedBooking = bookingRepository.saveAndFlush(booking);
 
         return DonationBookingResponse.from(savedBooking);
     }
+
 
     @Transactional
     public DonationBookingResponse cancelBooking(
@@ -179,11 +189,11 @@ public class DonationBookingService {
 
         if (!existingBooking.getDonorProfileId()
                 .equals(verifiedDonorProfileId)) {
+
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You cannot cancel another donor's booking");
         }
-
 
         DonationSlot slot = slotRepository
                 .findByIdForUpdate(
@@ -201,6 +211,7 @@ public class DonationBookingService {
 
         if (!booking.getDonorProfileId()
                 .equals(verifiedDonorProfileId)) {
+
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN,
                     "You cannot cancel another donor's booking");
@@ -228,6 +239,7 @@ public class DonationBookingService {
         slot.setReservedCount(slot.getReservedCount() - 1);
 
         slotRepository.save(slot);
+
         DonationBooking savedBooking =
                 bookingRepository.saveAndFlush(booking);
 
@@ -243,19 +255,20 @@ public class DonationBookingService {
         if (bookingId == null
                 || verifiedHospitalId == null
                 || newStatus == null) {
+
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
                     "Required information is missing");
         }
 
-        // Read the booking to identify its slot.
+
         DonationBooking existingBooking = bookingRepository
                 .findById(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "Booking not found"));
 
-        // Lock slot first, matching cancellation lock order.
+
         DonationSlot slot = slotRepository
                 .findByIdForUpdate(
                         existingBooking.getDonationSlot().getId())
@@ -263,7 +276,7 @@ public class DonationBookingService {
                         HttpStatus.NOT_FOUND,
                         "Donation slot not found"));
 
-        // Lock booking before updating status.
+
         DonationBooking booking = bookingRepository
                 .findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new ResponseStatusException(
@@ -285,6 +298,7 @@ public class DonationBookingService {
         String currentStatus = booking.getDonationBookingStatus();
 
         boolean validTransition = switch (currentStatus) {
+
             case "PENDING" ->
                     newStatus.equals("CONFIRMED")
                             || newStatus.equals("CANCELLED");
@@ -304,6 +318,7 @@ public class DonationBookingService {
 
 
         if ("CANCELLED".equals(newStatus)) {
+
             if (slot.getReservedCount() <= 0) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
@@ -322,28 +337,27 @@ public class DonationBookingService {
         return DonationBookingResponse.from(savedBooking);
     }
 
+
     @Transactional(readOnly = true)
     public List<DonationBookingResponse> getBookingsByDonor(
             Long verifiedDonorProfileId) {
 
         return bookingRepository.findByDonorProfileId(
-                        verifiedDonorProfileId
-                ).stream()
+                        verifiedDonorProfileId)
+                .stream()
                 .map(DonationBookingResponse::from)
                 .toList();
     }
+
 
     @Transactional(readOnly = true)
     public List<DonationBookingResponse> getBookingsByBloodRequest(
             Long bloodRequestId) {
 
         return bookingRepository.findByBloodRequestId(
-                        bloodRequestId
-                ).stream()
+                        bloodRequestId)
+                .stream()
                 .map(DonationBookingResponse::from)
                 .toList();
     }
-
-
-
 }

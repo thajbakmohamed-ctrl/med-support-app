@@ -119,4 +119,5 @@ public class DonationSlotService {
                 .filter(slot -> hospitalId.equals(slot.getHospitalId()))
                 .toList();
     }
+
 }
