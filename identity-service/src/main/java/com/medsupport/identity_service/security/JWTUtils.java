@@ -19,32 +19,23 @@ public class JWTUtils {
 
     public JWTUtils(@Value("${jwt.secret}") String secret) {
         if (secret.getBytes(StandardCharsets.UTF_8).length < 32) {
-            throw new IllegalArgumentException(
-                    "JWT secret must contain at least 32 bytes");
+            throw new IllegalArgumentException("JWT secret must contain at least 32 bytes");
         }
 
-        this.secretKey = Keys.hmacShaKeyFor(
-                secret.getBytes(StandardCharsets.UTF_8));
+        this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(User user) {
         long now = System.currentTimeMillis();
 
-        return Jwts.builder()
-                .subject(user.getEmail())
+        return Jwts.builder().subject(user.getEmail())
                 .claim("userId", user.getId())
-                .claim("role", user.getRole())
-                .issuedAt(new Date(now))
-                .expiration(new Date(now + 86400000L))
-                .signWith(secretKey)
-                .compact();
+                .claim("role", user.getRole()).issuedAt(new Date(now))
+                .expiration(new Date(now + 86400000L)).signWith(secretKey).compact();
     }
 
     public Claims validateToken(String token) {
-        return Jwts.parser()
-                .verifyWith(secretKey)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        return Jwts.parser().verifyWith(secretKey)
+                .build().parseSignedClaims(token).getPayload();
     }
 }

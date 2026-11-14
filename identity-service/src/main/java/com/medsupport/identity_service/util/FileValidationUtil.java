@@ -11,26 +11,22 @@ public final class FileValidationUtil {
     private FileValidationUtil() {
     }
 
-    public static String validateFile(
-            MultipartFile file,
+    public static String validateFile(MultipartFile file,
             boolean allowPdf) throws IOException {
 
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "File is required");
+            throw new IllegalArgumentException("File is required");
         }
 
         if (file.getSize() > 5 * 1024 * 1024) {
-            throw new IllegalArgumentException(
-                    "Maximum file size is 5 MB");
+            throw new IllegalArgumentException("Maximum file size is 5 MB");
         }
 
         byte[] header = new byte[8];
 
         int bytesRead;
         try (InputStream input = file.getInputStream()) {
-            bytesRead = input.readNBytes(
-                    header, 0, header.length);
+            bytesRead = input.readNBytes(header, 0, header.length);
         }
 
         boolean isPdf = bytesRead >= 5
@@ -57,23 +53,18 @@ public final class FileValidationUtil {
 
         String contentType = file.getContentType();
 
-        if (allowPdf
-                && isPdf
-                && "application/pdf".equals(contentType)) {
+        if (allowPdf && isPdf && "application/pdf".equals(contentType)) {
             return ".pdf";
         }
 
-        if (isJpeg
-                && "image/jpeg".equals(contentType)) {
+        if (isJpeg && "image/jpeg".equals(contentType)) {
             return ".jpg";
         }
 
-        if (isPng
-                && "image/png".equals(contentType)) {
+        if (isPng && "image/png".equals(contentType)) {
             return ".png";
         }
 
-        throw new IllegalArgumentException(
-                "Invalid or unsupported file content");
+        throw new IllegalArgumentException("Invalid or unsupported file content");
     }
 }

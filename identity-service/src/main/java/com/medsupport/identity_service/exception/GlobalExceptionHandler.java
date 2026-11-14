@@ -17,9 +17,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex) {
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "error", ex.getMessage()
-                ));
+                .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -34,9 +32,7 @@ public class GlobalExceptionHandler {
                 .orElse("Invalid request data");
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "error", message
-                ));
+                .body(Map.of("error", message));
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
@@ -44,9 +40,7 @@ public class GlobalExceptionHandler {
             org.springframework.dao.DataIntegrityViolationException ex) {
 
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(Map.of(
-                        "error", "A record with these details already exists"
-                ));
+                .body(Map.of("error", "A record with these details already exists"));
     }
 
     @ExceptionHandler(java.util.NoSuchElementException.class)
@@ -57,8 +51,7 @@ public class GlobalExceptionHandler {
                 .body(Map.of(
                         "error", ex.getMessage() == null
                                 ? "Resource not found"
-                                : ex.getMessage()
-                ));
+                                : ex.getMessage()));
     }
 
     @ExceptionHandler(ResourceConflictException.class)
@@ -75,9 +68,7 @@ public class GlobalExceptionHandler {
             IllegalStateException ex) {
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(Map.of(
-                        "error", ex.getMessage()
-                ));
+                .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
@@ -85,9 +76,7 @@ public class GlobalExceptionHandler {
             MaxUploadSizeExceededException ex) {
 
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                .body(Map.of(
-                        "error", "File size exceeds the allowed limit of 5 MB"
-                ));
+                .body(Map.of("error", "File size exceeds the allowed limit of 5 MB"));
     }
 
 

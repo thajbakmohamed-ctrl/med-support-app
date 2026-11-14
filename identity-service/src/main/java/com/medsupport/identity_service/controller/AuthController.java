@@ -37,8 +37,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(Map.of(
                         "message", "User registered successfully",
-                        "email", user.getEmail()
-                ));
+                        "email", user.getEmail()));
     }
 
     @PostMapping("/login")
@@ -60,9 +59,7 @@ public class AuthController {
                     .body(Map.of("message", "Invalid or expired token"));
         }
 
-        return ResponseEntity.ok(
-                Map.of("message", "Email verified successfully")
-        );
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
     }
 
     @PostMapping("/forgot-password")
@@ -73,8 +70,7 @@ public class AuthController {
 
         return ResponseEntity.ok(Map.of(
                 "message",
-                "If the email is registered, a reset link will be sent"
-        ));
+                "If the email is registered, a reset link will be sent"));
     }
 
     @PostMapping("/reset-password")
@@ -85,13 +81,11 @@ public class AuthController {
 
         if (!success) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Invalid or expired reset token"
-            ));
+                    "message", "Invalid or expired reset token"));
         }
 
         return ResponseEntity.ok(Map.of(
-                "message", "Password reset successfully"
-        ));
+                "message", "Password reset successfully"));
     }
 
     @PutMapping("/change-password")
@@ -100,18 +94,15 @@ public class AuthController {
             Authentication authentication) {
 
         boolean success = authService.changePasswordByEmail(
-                authentication.getName(), request
-        );
+                authentication.getName(), request);
 
         if (!success) {
             return ResponseEntity.badRequest().body(Map.of(
-                    "message", "Current password is incorrect"
-            ));
+                    "message", "Current password is incorrect"));
         }
 
         return ResponseEntity.ok(Map.of(
-                "message", "Password changed successfully"
-        ));
+                "message", "Password changed successfully"));
     }
 
 }

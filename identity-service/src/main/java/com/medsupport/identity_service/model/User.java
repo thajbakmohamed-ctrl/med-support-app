@@ -57,7 +57,6 @@ public class User {
     @Column(name = "updated_at")
     private LocalDateTime updatedAtUser;
 
-    // Reference to Hospital in Blood Service
     @Column(name = "hospital_id")
     private Long hospitalId;
 

@@ -18,26 +18,22 @@ public class EmailService {
         this.mailSender = mailSender;
     }
 
-    public void sendVerificationEmail(
-            String userEmail, String verificationLink) {
+    public void sendVerificationEmail(String userEmail, String verificationLink) {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(userEmail);
         message.setSubject("Verify Your Med Support Account");
 
-        message.setText(
-                "Welcome to Med Support!\n\n" +
+        message.setText("Welcome to Med Support!\n\n" +
                         "Please click the link below to verify your email:\n\n" +
                         verificationLink +
-                        "\n\nThis link is valid for 24 hours."
-        );
+                        "\n\nThis link is valid for 24 hours.");
 
         mailSender.send(message);
         logger.info("Verification email submitted successfully");
     }
 
-    public void sendPasswordResetEmail(
-            String userEmail, String resetLink) {
+    public void sendPasswordResetEmail(String userEmail, String resetLink) {
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(userEmail);

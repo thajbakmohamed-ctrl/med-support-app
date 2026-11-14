@@ -27,9 +27,7 @@ public class DonorProfileController {
             Authentication authentication) {
 
         DonorProfile profile = donorProfileService.createDonorProfile(
-                authentication.getName(),
-                request
-        );
+                authentication.getName(), request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(DonorProfileResponse.from(profile));
@@ -39,9 +37,7 @@ public class DonorProfileController {
     public ResponseEntity<DonorProfileResponse> getMyDonorProfile(
             Authentication authentication) {
 
-        DonorProfileResponse response = donorProfileService
-                .getMyDonorProfile(authentication.getName());
-
+        DonorProfileResponse response = donorProfileService.getMyDonorProfile(authentication.getName());
         return ResponseEntity.ok(response);
     }
 
@@ -50,11 +46,8 @@ public class DonorProfileController {
             @Valid @RequestBody DonorProfileRequest request,
             Authentication authentication) {
 
-        DonorProfileResponse response =
-                donorProfileService.updateMyDonorProfile(
-                        authentication.getName(),
-                        request
-                );
+        DonorProfileResponse response = donorProfileService.updateMyDonorProfile(
+                authentication.getName(), request);
 
         return ResponseEntity.ok(response);
     }

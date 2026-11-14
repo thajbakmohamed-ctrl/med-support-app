@@ -10,10 +10,8 @@ public class UpdateProfileRequest {
     private String name;
 
     @NotBlank(message = "Phone number is required")
-    @Pattern(
-            regexp = "\\d{8}",
-            message = "Phone number must contain exactly 8 digits"
-    )
+    @Pattern(regexp = "\\d{8}",
+            message = "Phone number must contain exactly 8 digits")
     private String phoneNumber;
 
     public String getName() {
