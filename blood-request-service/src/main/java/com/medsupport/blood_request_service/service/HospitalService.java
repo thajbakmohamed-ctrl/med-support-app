@@ -39,18 +39,15 @@ public class HospitalService {
 
 
         hospital.setHospitalActive(false);
-
         return HospitalResponse.from(hospitalRepository.save(hospital));
     }
 
     @Transactional
-    public HospitalResponse updateHospital(Long hospitalId,
-            HospitalRequest request) {
+    public HospitalResponse updateHospital(Long hospitalId, HospitalRequest request) {
 
         if (hospitalId == null || request == null) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Hospital ID and information are required");
+                    HttpStatus.BAD_REQUEST, "Hospital ID and information are required");
         }
 
         Hospital hospital = findHospital(hospitalId);
@@ -65,11 +62,9 @@ public class HospitalService {
 
     @Transactional
     public HospitalResponse activateHospital(Long hospitalId) {
-
         Hospital hospital = findHospital(hospitalId);
 
         hospital.setHospitalActive(true);
-
         return HospitalResponse.from(hospitalRepository.save(hospital));
     }
 

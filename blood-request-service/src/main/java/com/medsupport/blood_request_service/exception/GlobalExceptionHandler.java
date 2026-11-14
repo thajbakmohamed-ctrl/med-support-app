@@ -20,15 +20,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(ex.getStatusCode())
                 .body(Map.of(
                         "status", ex.getStatusCode().value(),
-                        "message", ex.getReason() != null
-                                ? ex.getReason()
-                                : "Request failed"));
+                        "message", ex.getReason() != null ? ex.getReason() : "Request failed"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(
             MethodArgumentNotValidException ex) {
-
         String message = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
