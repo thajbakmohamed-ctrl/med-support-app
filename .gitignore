@@ -35,3 +35,4 @@ build/
 /uploads/
 .env
 uploads-backup/
+/db-backups/

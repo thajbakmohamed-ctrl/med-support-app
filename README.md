@@ -1,5 +1,14 @@
 # Healthcare Support System
 
+## Project 4 — current delivery version
+
+The `feature/project4-microservices` branch runs Identity, Booking, Blood Request
+and Notification as separate Dockerized services with PostgreSQL, Kafka, a
+transactional outbox, Cucumber checks and a GitHub Actions image pipeline.
+See the [Project 4 runbook](runtime/project4/README.md) for architecture, API docs,
+configuration, testing, manual activation and remaining deployment work.
+The Project 2/3 documentation below is retained as historical context.
+
 ## Project Description
 
 Healthcare Support System is a backend application designed to connect individuals who want to support the healthcare sector with hospitals and healthcare organizations that need community assistance.
