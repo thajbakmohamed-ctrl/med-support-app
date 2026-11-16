@@ -50,7 +50,7 @@ class BookingHttpContractTest {
                 """)).andExpect(status().isCreated()).andExpect(jsonPath("$.donationBookingStatus").value("PENDING"))
                 .andExpect(jsonPath("$.donationBookingDate").value("2099-04-01")).andReturn().getResponse().getContentAsString();
         Set<String> fields=new HashSet<>(JsonMapper.builder().build().readTree(body).propertyNames());
-        assertEquals(Set.of("id","donorProfileId","bloodRequestId","donationSlotId","donationBookingDate","donationBookingTime","donationBookingStatus","createdAt","updatedAt"),fields);
+        assertEquals(Set.of("id","donorProfileId","bloodRequestId","donationSlotId","donationBookingDate","donationBookingTime","donationBookingStatus","createdAt","updatedAt","hospitalId"),fields);
         verify(bookings).createBooking(argThat(r->r.getDonorProfileId()==2L && r.getBloodRequestId()==3L && r.getDonationSlotId()==4L && r.getDonationBookingTime().equals(LocalTime.of(10,0))),eq(2L),eq(5L),eq(date),eq("OPEN"),eq("synthetic@example.invalid"));
     }
     @Test void donorListIsArrayAtMyRoute() throws Exception {
