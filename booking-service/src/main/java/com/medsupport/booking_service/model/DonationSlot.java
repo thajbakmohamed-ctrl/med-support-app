@@ -13,8 +13,7 @@ import java.time.LocalTime;
 @Entity
 @Table(
         name = "donation_slot",
-        check = {
-                @CheckConstraint(
+        check = {@CheckConstraint(
                         name = "chk_donation_slot_capacity",
                         constraint = "capacity >= 1 AND reserved_count >= 0 AND reserved_count <= capacity"
                 )

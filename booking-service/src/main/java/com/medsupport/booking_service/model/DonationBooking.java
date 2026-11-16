@@ -10,21 +10,14 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(
-        name = "donation_booking",
+@Table(name = "donation_booking",
         indexes = {
-                @Index(
-                        name = "idx_booking_donor",
-                        columnList = "donor_profile_id"
-                ),
-                @Index(
-                        name = "idx_booking_request",
-                        columnList = "blood_request_id"
-                ),
-                @Index(
-                        name = "idx_booking_slot",
-                        columnList = "donation_slot_id"
-                )
+                @Index(name = "idx_booking_donor",
+                        columnList = "donor_profile_id"),
+                @Index(name = "idx_booking_request",
+                        columnList = "blood_request_id"),
+                @Index(name = "idx_booking_slot",
+                        columnList = "donation_slot_id")
         }
 )
 public class DonationBooking {

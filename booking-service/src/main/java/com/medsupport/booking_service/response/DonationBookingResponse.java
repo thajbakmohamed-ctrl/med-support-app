@@ -7,23 +7,21 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-public record DonationBookingResponse(
-        Long id,
-        Long donorProfileId,
-        Long bloodRequestId,
-        Long donationSlotId,
-        LocalDate donationBookingDate,
-        LocalTime donationBookingTime,
-        String donationBookingStatus,
-        LocalDateTime createdAt,
-        LocalDateTime updatedAt
-) {
+public record DonationBookingResponse(Long id, Long donorProfileId,
+        Long bloodRequestId, Long donationSlotId, LocalDate donationBookingDate,
+        LocalTime donationBookingTime, String donationBookingStatus,
+        LocalDateTime createdAt, LocalDateTime updatedAt, Long hospitalId) {
 
-    public static DonationBookingResponse from(
-            DonationBooking booking) {
+    public DonationBookingResponse(Long id, Long donorProfileId, Long bloodRequestId,
+            Long donationSlotId, LocalDate donationBookingDate, LocalTime donationBookingTime,
+            String donationBookingStatus, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        this(id, donorProfileId, bloodRequestId, donationSlotId, donationBookingDate,
+                donationBookingTime, donationBookingStatus, createdAt, updatedAt, null);
+    }
 
-        return new DonationBookingResponse(
-                booking.getId(),
+    public static DonationBookingResponse from(DonationBooking booking) {
+
+        return new DonationBookingResponse(booking.getId(),
                 booking.getDonorProfileId(),
                 booking.getBloodRequestId(),
                 booking.getDonationSlot().getId(),
@@ -31,7 +29,6 @@ public record DonationBookingResponse(
                 booking.getDonationBookingTime(),
                 booking.getDonationBookingStatus(),
                 booking.getCreatedAt(),
-                booking.getUpdatedAt()
-        );
+                booking.getUpdatedAt(), booking.getDonationSlot().getHospitalId());
     }
 }
