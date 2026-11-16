@@ -13,12 +13,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
 
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
@@ -38,6 +38,20 @@ public class UserController {
         UserResponse response = userService.getMyProfile(authentication.getName());
 
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping
+    public org.springframework.data.domain.Page<UserResponse> searchUsers(
+            @RequestParam(defaultValue = "") String search, @RequestParam(defaultValue = "0") int page) {
+        return userService.searchUsers(search.trim(), page);
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{userId}/{action:activate|reactivate|deactivate}")
+    public UserResponse changeAccountStatus(@PathVariable Long userId, @PathVariable String action,
+            Authentication authentication) {
+        return userService.changeAccountStatus(userId, !action.equals("deactivate"), authentication.getName());
     }
 
 

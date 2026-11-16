@@ -20,9 +20,29 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
+@io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
 @RestController
 @RequestMapping("/api/blood-requests")
 public class BloodRequestController {
+
+    @GetMapping("/browse")
+    public List<BloodRequestResponse.Shared> browseRequests(
+            @RequestHeader(value=HttpHeaders.AUTHORIZATION, required=false) String authorization) {
+        identityClient.verifyDonor(authorization);
+        return bloodRequestService.browseRequests();
+    }
+
+    @GetMapping("/progress")
+    public List<BloodRequestService.RequestProgress> getRequestProgress(
+            @RequestHeader(value=HttpHeaders.AUTHORIZATION, required=false) String authorization) {
+        return bloodRequestService.getRequestProgress(identityClient.getProgressHospitalScope(authorization));
+    }
+
+    @io.swagger.v3.oas.annotations.security.SecurityRequirements
+    @GetMapping("/shared/{id}")
+    public BloodRequestResponse.Shared getSharedBloodRequest(@PathVariable Long id) {
+        return bloodRequestService.getSharedBloodRequest(id);
+    }
 
     private final BloodRequestService bloodRequestService;
     private final IdentityClient identityClient;

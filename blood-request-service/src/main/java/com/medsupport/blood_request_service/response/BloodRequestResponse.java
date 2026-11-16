@@ -15,6 +15,9 @@ public record BloodRequestResponse(
         String bloodRequestUrgency,
         String bloodRequestDescription
 ) {
+    public record Shared(Long id, Long hospitalId, String hospitalName,
+            LocalDate neededDate, String bloodRequestStatus, String requiredBloodType,
+            Integer requiredBloodUnits, String bloodRequestUrgency) {}
 
     public BloodRequestResponse(Long id, Long hospitalId, LocalDate neededDate,
             String bloodRequestStatus) {

@@ -56,8 +56,8 @@ class AuthServiceTest {
 
         ReflectionTestUtils.setField(
                 authService,
-                "baseUrl",
-                "http://localhost:8083"
+                "frontendUrl",
+                "http://localhost:5500"
         );
 
         user = new User();
@@ -104,7 +104,7 @@ class AuthServiceTest {
 
         verify(emailService).sendVerificationEmail(
                 eq(EMAIL),
-                contains("/api/auth/verify-email?token=")
+                contains("http://localhost:5500/?token=")
         );
 
         verify(auditLogService).saveAuditLog(
@@ -336,7 +336,7 @@ class AuthServiceTest {
 
         verify(emailService).sendVerificationEmail(
                 eq("staff@example.com"),
-                contains("/api/auth/verify-email?token=")
+                contains("http://localhost:5500/?token=")
         );
 
         verify(auditLogService).saveAuditLog(

@@ -20,6 +20,47 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @Service
 public class BloodRequestService {
 
+    @Transactional(readOnly = true)
+    public List<BloodRequestResponse.Shared> browseRequests() {
+        return bloodRequestRepository.findAll().stream().map(request ->
+                new BloodRequestResponse.Shared(request.getId(), request.getHospital().getId(),
+                        request.getHospital().getHospitalName(), request.getBloodNeededDate(),
+                        request.getBloodRequestStatus(), request.getRequiredBloodType(),
+                        request.getRequiredBloodUnits(), request.getBloodRequestUrgency())).toList();
+    }
+
+    public record RequestProgress(Long requestId, Long hospitalId, int requiredUnits,
+            long completedUnits, long availableSlots) {}
+
+    @Transactional(readOnly = true)
+    public List<RequestProgress> getRequestProgress(Long hospitalId) {
+        return jdbcTemplate.query("""
+                SELECT r.id, r.hospital_id, r.units_needed,
+                  (SELECT COUNT(*) FROM donation_booking b
+                   WHERE b.blood_request_id=r.id AND b.donation_booking_status='COMPLETED') AS completed,
+                  (SELECT COUNT(*) FROM donation_slot s
+                   WHERE s.hospital_id=r.hospital_id AND h.is_active AND r.status='OPEN'
+                     AND s.status='OPEN' AND s.reserved_count<s.capacity
+                     AND s.slot_date<=r.needed_date
+                     AND s.slot_date+s.start_time>(CURRENT_TIMESTAMP AT TIME ZONE 'UTC')) AS available
+                FROM blood_request r JOIN hospital h ON h.id=r.hospital_id
+                WHERE (CAST(? AS BIGINT) IS NULL OR r.hospital_id=?) ORDER BY r.id
+                """, (rs, row) -> new RequestProgress(rs.getLong("id"), rs.getLong("hospital_id"),
+                rs.getInt("units_needed"), rs.getLong("completed"), rs.getLong("available")), hospitalId, hospitalId);
+    }
+
+    @Transactional(readOnly = true)
+    public BloodRequestResponse.Shared getSharedBloodRequest(Long id) {
+        BloodRequest request = getBloodRequestById(id);
+        if (!"OPEN".equals(request.getBloodRequestStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Open blood request not found");
+        }
+        return new BloodRequestResponse.Shared(request.getId(), request.getHospital().getId(),
+                request.getHospital().getHospitalName(), request.getBloodNeededDate(),
+                request.getBloodRequestStatus(), request.getRequiredBloodType(),
+                request.getRequiredBloodUnits(), request.getBloodRequestUrgency());
+    }
+
     private final BloodRequestRepository bloodRequestRepository;
     private final HospitalRepository hospitalRepository;
     private final JdbcTemplate jdbcTemplate;

@@ -29,8 +29,8 @@ public class AuthService {
     private final EmailService emailService;
     private final AuditLogService auditLogService;
 
-    @Value("${app.base-url:http://localhost:8083}")
-    private String baseUrl;
+    @Value("${app.frontend-url:http://localhost:5500}")
+    private String frontendUrl;
 
     public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder,
             JWTUtils jwtUtils, EmailService emailService, AuditLogService auditLogService) {
@@ -83,7 +83,7 @@ public class AuthService {
                 "User ID " + savedUser.getId()
                         + " registered with role " + savedUser.getRole());
 
-        String verificationLink = baseUrl + "/api/auth/verify-email?token="
+        String verificationLink = frontendUrl + "/?token="
                 + savedUser.getVerificationToken();
 
         emailService.sendVerificationEmail(savedUser.getEmail(),
@@ -134,7 +134,7 @@ public class AuthService {
                 "Hospital staff user ID " + savedUser.getId()
                         + " created by admin");
 
-        String verificationLink = baseUrl + "/api/auth/verify-email?token="
+        String verificationLink = frontendUrl + "/?token="
                 + savedUser.getVerificationToken();
 
         emailService.sendVerificationEmail(savedUser.getEmail(), verificationLink);
@@ -213,7 +213,7 @@ public class AuthService {
                 "PASSWORD_RESET_REQUESTED", user.getEmail(),
                 "Password reset requested for user ID " + user.getId());
 
-        String resetLink = baseUrl + "/reset-password.html?token="
+        String resetLink = frontendUrl + "/?resetToken="
                 + user.getPasswordResetToken();
 
         emailService.sendPasswordResetEmail(user.getEmail(), resetLink);

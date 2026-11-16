@@ -88,6 +88,7 @@ public class AuthController {
                 "message", "Password reset successfully"));
     }
 
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
     @PutMapping("/change-password")
     public ResponseEntity<Map<String, String>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,

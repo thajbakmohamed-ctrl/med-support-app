@@ -30,6 +30,7 @@ public class HospitalController {
     }
 
 
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
     @PostMapping
     public ResponseEntity<HospitalResponse> createHospital(
             @Valid @RequestBody HospitalRequest request,
@@ -44,6 +45,7 @@ public class HospitalController {
     }
 
 
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
     @PutMapping("/{hospitalId}")
     public ResponseEntity<HospitalResponse> updateHospital(
             @PathVariable Long hospitalId,
@@ -56,6 +58,7 @@ public class HospitalController {
         return ResponseEntity.ok(response);
     }
 
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
     @PatchMapping("/{hospitalId}/activate")
     public ResponseEntity<HospitalResponse> activateHospital(
             @PathVariable Long hospitalId,
@@ -68,6 +71,7 @@ public class HospitalController {
     }
 
 
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
     @PatchMapping("/{hospitalId}/deactivate")
     public ResponseEntity<HospitalResponse> deactivateHospital(
             @PathVariable Long hospitalId,
@@ -89,5 +93,33 @@ public class HospitalController {
     @GetMapping
     public ResponseEntity<List<HospitalResponse>> getAllHospitals() {
         return ResponseEntity.ok(hospitalService.getAllHospitals());
+    }
+
+    public record DepartmentRequest(
+            @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max=100) String name,
+            @jakarta.validation.constraints.Size(max=500) String description) {}
+
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
+    @GetMapping("/{hospitalId}/departments")
+    public List<HospitalService.Department> departments(@PathVariable Long hospitalId,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearer) {
+        identityClient.verifyUser(bearer);
+        return hospitalService.getDepartments(hospitalId);
+    }
+
+    @io.swagger.v3.oas.annotations.security.SecurityRequirement(name="bearerAuth")
+    @PostMapping("/{hospitalId}/departments")
+    public ResponseEntity<HospitalService.Department> createDepartment(@PathVariable Long hospitalId,
+            @RequestHeader(HttpHeaders.AUTHORIZATION) String bearer, @Valid @RequestBody DepartmentRequest request) {
+        Long assigned = identityClient.getVerifiedHospitalId(bearer);
+        if (!hospitalId.equals(assigned)) throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.FORBIDDEN, "You cannot manage another hospital's departments");
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED).body(
+                    hospitalService.createDepartment(assigned, request.name(), request.description()));
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new org.springframework.web.server.ResponseStatusException(HttpStatus.CONFLICT,
+                    "A department with this name already exists");
+        }
     }
 }

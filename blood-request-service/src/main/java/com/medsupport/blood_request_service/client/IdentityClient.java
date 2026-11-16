@@ -77,6 +77,17 @@ public class IdentityClient {
         }
     }
 
+    public void verifyUser(String authorizationHeader) {
+        getAuthenticatedUser(authorizationHeader);
+    }
+
+    public Long getProgressHospitalScope(String authorizationHeader) {
+        UserInfo user = getAuthenticatedUser(authorizationHeader);
+        if ("DONOR".equals(user.role()) || "ADMIN".equals(user.role())) return null;
+        if ("HOSPITAL_STAFF".equals(user.role()) && user.hospitalId() != null) return user.hospitalId();
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "An assigned hospital is required");
+    }
+
     public void verifyDonor(String authorizationHeader) {
 
         UserInfo user = getAuthenticatedUser(authorizationHeader);

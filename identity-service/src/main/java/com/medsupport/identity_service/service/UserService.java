@@ -30,6 +30,28 @@ public class UserService {
     @Value("${app.upload-dir:uploads}")
     private String uploadDir;
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<UserResponse> searchUsers(String search, int page) {
+        if (page < 0 || search.length() > 100) throw new IllegalArgumentException("Invalid search or page");
+        return userRepository.findByNameContainingIgnoreCaseOrEmailContainingIgnoreCase(search, search,
+                org.springframework.data.domain.PageRequest.of(page, 20, org.springframework.data.domain.Sort.by("id")))
+                .map(user -> new UserResponse(user.getId(), user.getName(), user.getEmail(), user.getPhoneNumber(),
+                        user.getRole(), user.getStatus(), user.isEmailVerified(), null, user.getHospitalId()));
+    }
+
+    @Transactional
+    public UserResponse changeAccountStatus(Long id, boolean active, String actor) {
+        User user = userRepository.findById(id).orElseThrow(() -> new NoSuchElementException("User not found"));
+        if (!active && "ADMIN".equals(user.getRole()))
+            throw new IllegalArgumentException("Administrator accounts cannot be deactivated here");
+        user.setStatus(active ? "ACTIVE" : "INACTIVE");
+        if (!active) {
+            user.setPasswordResetToken(null); user.setPasswordResetTokenExpiry(null);
+        }
+        auditLogService.saveAuditLog(active ? "ACCOUNT_REACTIVATED" : "ACCOUNT_DEACTIVATED", actor, "User ID " + id);
+        return UserResponse.from(userRepository.save(user));
+    }
+
 
     public UserService(UserRepository userRepository,
             JdbcTemplate jdbcTemplate, AuditLogService auditLogService) {
@@ -84,6 +106,9 @@ public class UserService {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if ("ADMIN".equals(user.getRole()))
+            throw new IllegalArgumentException("Administrator accounts cannot be deactivated here");
 
         if ("INACTIVE".equals(user.getStatus())) {
             return;
