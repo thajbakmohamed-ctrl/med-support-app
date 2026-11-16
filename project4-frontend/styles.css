@@ -169,6 +169,13 @@ tbody tr:hover{background:#fbf0f5}
 @media(max-width:780px){.main{padding-top:25px}.sidebar{box-shadow:0 3px 14px rgba(65,31,44,.025);overflow-y:visible}.sidebar nav button{min-height:42px}.hero.hero-donation{padding:28px}.topbar{margin-bottom:23px}.stats{gap:12px}}
 @media(max-width:520px){.main{padding-top:22px}.panel{padding:20px}.hero.hero-donation{padding:25px 22px}.hero h2{font-size:30px}.hero p{font-size:13px}.hero-donation .hero-art{max-width:240px}.stat{padding:20px}.stat strong{font-size:30px}.appointment-card{padding:20px}.appointment-heading{margin:21px 0}.appointment-facts{padding:16px;gap:16px 10px}.appointment-facts dd{font-size:13px}.appointment-actions{flex-direction:column}.appointment-actions .button{width:100%}.donor-appointments .panel-head h2{font-size:21px}.auth-layout .panel{padding:24px}.record-tab{padding:10px 12px}.workspace-footer{flex-wrap:wrap}}
 .donation-progress{margin:14px 0;color:var(--muted);font-size:13px}
+.booking-success{border-top:4px solid #34744f;background:linear-gradient(135deg,#f2faf5,#fff);margin-bottom:24px}
+.booking-success h2{color:#24543a;margin:8px 0 20px}
+.booking-success h3{margin-top:24px}
+.donation-preparation{margin:18px 0}
+.donation-preparation summary{cursor:pointer;font-weight:600;color:#6e2942}
+.donation-preparation-list{padding-left:22px;line-height:1.7;color:var(--muted)}
+.donation-preparation-list li+li{margin-top:8px}
 [data-request-life][hidden]{display:none}
 .record-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
 .record-tab.active{background:#781c32;color:#fff}

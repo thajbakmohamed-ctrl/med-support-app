@@ -517,15 +517,15 @@ async function donorBookingForm(requestId,selectedSlotId,rescheduling=null){
             try{
                 const slot=choices.find(s=>String(s.id)===val('donorSlotChoice'));
                 const payload=bookingPayload(profile,request,slot,val('donorBookingTime'));
-                await api(rescheduling?'/api/donation-bookings/'+rescheduling.id+'/reschedule':'/api/donation-bookings',{method:rescheduling?'PUT':'POST',body:JSON.stringify(payload)});
+                const booking=await api(rescheduling?'/api/donation-bookings/'+rescheduling.id+'/reschedule':'/api/donation-bookings',{method:rescheduling?'PUT':'POST',body:JSON.stringify(payload)});
                 created=true;
                 // Invalidate cached capacity as soon as the mutation succeeds.
                 state.slots=[];state.bookings=[];
-                let refreshWarning='';
-                try{await refreshDonorAvailability(requestId);}catch{refreshWarning=' Availability could not be refreshed; refresh before another booking.';}
                 if(current()){
                     state.page='bookings';renderNav();$('#pageTitle').textContent='My Donation Appointments';
-                    await donorBookings();
+                    await donorBookings({booking,hospitalName:request.hospitalName||state.hospitals.find(h=>h.id===request.hospitalId)?.hospitalName,title:rescheduling?'Appointment Rescheduled':'Booking Successful'});
+                    let refreshWarning='';
+                    try{await refreshDonorAvailability(requestId);}catch{refreshWarning=' Availability could not be refreshed; refresh before another booking.';}
                     if(state.token===token&&state.page==='bookings'&&profileVisit===visit)notify((rescheduling?'Appointment rescheduled; hospital confirmation is required.':'Your donation appointment was booked successfully.')+refreshWarning);
                 }
             }catch(error){
@@ -540,14 +540,21 @@ async function donorBookingForm(requestId,selectedSlotId,rescheduling=null){
         };
     }
 }
-function donorBookingCards(rows){
-    return rows.length?'<div class="grid">'+newestDonorBookings(rows).map(b=>'<article class="item appointment-card"><div class="appointment-card-head"><span class="appointment-reference">Booking #'+esc(b.id)+'</span>'+statusPill(b.donationBookingStatus)+'</div><h3>Donation appointment</h3>'+profileFields([['Hospital',state.hospitals.find(h=>h.id===b.hospitalId)?.hospitalName||('Hospital #'+b.hospitalId)],['Blood request ID',b.bloodRequestId],['Slot ID',b.donationSlotId],['Appointment date',b.donationBookingDate],['Appointment time (UTC)',b.donationBookingTime],['Bahrain appointment',bahrainAppointment(b.donationBookingDate,b.donationBookingTime)],['Created',b.createdAt],['Updated',b.updatedAt]])+hospitalDirections(state.hospitals.find(h=>h.id===b.hospitalId))+(['PENDING','CONFIRMED'].includes(b.donationBookingStatus)?'<button class="button secondary" data-donor-cancel="'+esc(b.id)+'">Cancel booking</button>':'')+(upcomingBooking(b)?'<button class="button secondary" data-donor-reschedule="'+esc(b.id)+'">Reschedule</button>':'')+'</article>').join('')+'</div>':'<div class="empty">No donation bookings yet.</div>';
+function donationPreparationInstructions(){
+    return '<ul class="donation-preparation-list"><li>Eat a healthy meal before donating. Do not arrive fasting.</li><li>Drink plenty of water and stay hydrated.</li><li>Arrive 10–15 minutes early for registration and screening.</li><li>Get a good night\'s sleep before your appointment.</li></ul>';
 }
-async function donorBookings(){
+function bookingSuccessPanel({booking,hospitalName,title}){
+    const hospital=hospitalName||state.hospitals.find(h=>h.id===booking.hospitalId)?.hospitalName||'Hospital details are available in your booking below.';
+    return '<section class="panel booking-success" role="status" aria-labelledby="bookingSuccessTitle"><span class="eyebrow">YOUR DONATION APPOINTMENT</span><h2 id="bookingSuccessTitle" tabindex="-1">'+esc(title)+'</h2>'+profileFields([['Hospital',hospital],['Appointment (Bahrain, UTC+3)',bahrainAppointment(booking.donationBookingDate,booking.donationBookingTime)],['Booking status',booking.donationBookingStatus],['Booking reference',booking.id?'#'+booking.id:'Not available']])+(booking.donationBookingStatus==='PENDING'?'<p class="hint">Your appointment is pending hospital confirmation.</p>':'')+'<h3>Prepare for your donation</h3>'+donationPreparationInstructions()+'</section>';
+}
+function donorBookingCards(rows){
+    return rows.length?'<div class="grid">'+newestDonorBookings(rows).map(b=>'<article class="item appointment-card"><div class="appointment-card-head"><span class="appointment-reference">Booking #'+esc(b.id)+'</span>'+statusPill(b.donationBookingStatus)+'</div><h3>Donation appointment</h3>'+profileFields([['Hospital',state.hospitals.find(h=>h.id===b.hospitalId)?.hospitalName||('Hospital #'+b.hospitalId)],['Blood request ID',b.bloodRequestId],['Slot ID',b.donationSlotId],['Appointment date',b.donationBookingDate],['Appointment time (UTC)',b.donationBookingTime],['Bahrain appointment',bahrainAppointment(b.donationBookingDate,b.donationBookingTime)],['Created',b.createdAt],['Updated',b.updatedAt]])+hospitalDirections(state.hospitals.find(h=>h.id===b.hospitalId))+(['PENDING','CONFIRMED'].includes(b.donationBookingStatus)?'<button class="button secondary" data-donor-cancel="'+esc(b.id)+'">Cancel booking</button>':'')+(upcomingBooking(b)?'<details class="donation-preparation"><summary>Preparation instructions</summary>'+donationPreparationInstructions()+'</details><button class="button secondary" data-donor-reschedule="'+esc(b.id)+'">Reschedule</button>':'')+'</article>').join('')+'</div>':'<div class="empty">No donation bookings yet.</div>';
+}
+async function donorBookings(success=null){
     
     const generation=++donorBookingGeneration,token=state.token,page=state.page,visit=profileVisit;
     const current=()=>generation===donorBookingGeneration&&token===state.token&&state.page===page&&profileVisit===visit&&!!$('#donorMyBookings');
-    $('#view').innerHTML=panel('My Donation Appointments','<p class="hint">An automatic reminder is queued once for a pending or confirmed appointment within the next 24 hours. View it in Notifications. Stored times are UTC; Bahrain time is shown alongside.</p><div id="donorMyBookings">Loading your bookings...</div>');
+    $('#view').innerHTML=(success?.booking?bookingSuccessPanel(success):'')+panel('My Donation Appointments','<p class="hint">An automatic reminder is queued once for a pending or confirmed appointment within the next 24 hours. View it in Notifications. Stored times are UTC; Bahrain time is shown alongside.</p><div id="donorMyBookings">Loading your bookings...</div>');
     try{
         const profile=await requireDonorProfile();
         const [rows,hospitals]=await Promise.all([api('/api/donation-bookings/my'),api('/api/hospitals'),loadRequestProgress(current)]);
