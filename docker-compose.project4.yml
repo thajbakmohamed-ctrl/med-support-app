@@ -1,7 +1,7 @@
 name: med-support-p4-local
 
 x-app-environment: &app-environment
-  SPRING_DATASOURCE_URL: jdbc:postgresql://p4-postgres:5432/med_support
+  SPRING_DATASOURCE_URL: jdbc:postgresql://med-support-db.c6hucmaaukax.us-east-1.rds.amazonaws.com/med_support
   SPRING_DATASOURCE_USERNAME: medsupport_p4
   SPRING_DATASOURCE_PASSWORD: ${P4_DB_PASSWORD:?Set P4_DB_PASSWORD in the dedicated Project 4 env file}
   DB_PASSWORD: ${P4_DB_PASSWORD:?Set P4_DB_PASSWORD}
