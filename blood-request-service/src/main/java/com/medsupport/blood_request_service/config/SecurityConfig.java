@@ -21,6 +21,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @Configuration
 public class SecurityConfig {
 
+    @Value("${app.frontend-origin:http://localhost:5500}")
+    private String frontendOrigin = "http://localhost:5500";
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
@@ -72,7 +75,7 @@ public class SecurityConfig {
     public UrlBasedCorsConfigurationSource donorCorsConfigurationSource() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5500"));
+        configuration.setAllowedOrigins(List.of(frontendOrigin));
         configuration.setAllowedMethods(List.of("GET"));
         configuration.setAllowedHeaders(List.of("Authorization", "Accept"));
         configuration.setAllowCredentials(false);
@@ -98,7 +101,7 @@ public class SecurityConfig {
     private void registerFrontendCors(UrlBasedCorsConfigurationSource source,
             String path, List<String> methods) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5500"));
+        configuration.setAllowedOrigins(List.of(frontendOrigin));
         configuration.setAllowedMethods(methods);
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept"));
         configuration.setAllowCredentials(false);

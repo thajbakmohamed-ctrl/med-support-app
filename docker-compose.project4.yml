@@ -83,7 +83,8 @@ services:
     volumes: [p4-kafka-data:/var/lib/kafka/data]
     networks: [p4-network]
     healthcheck:
-      test: [CMD, /opt/kafka/bin/kafka-topics.sh, --bootstrap-server, p4-kafka:19092, --list]
+      # The probe launches a separate JVM; do not inherit a broker-sized heap.
+      test: [CMD-SHELL, "KAFKA_HEAP_OPTS='-Xms16m -Xmx64m' /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --list"]
       interval: 10s
       timeout: 10s
       retries: 20

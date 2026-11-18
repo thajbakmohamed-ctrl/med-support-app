@@ -1,0 +1,7 @@
+out/
+*.zip
+*.jar
+*.pem
+*.env
+*.env.*
+!environment.env.example

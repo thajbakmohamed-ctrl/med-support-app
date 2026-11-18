@@ -17,6 +17,9 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-origin:http://localhost:5500}")
+    private String frontendOrigin = "http://localhost:5500";
+
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http) throws Exception {
@@ -94,7 +97,7 @@ public class SecurityConfig {
     private void registerDonorCors(UrlBasedCorsConfigurationSource source,
             String path, List<String> methods, List<String> headers) {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5500"));
+        configuration.setAllowedOrigins(List.of(frontendOrigin));
         configuration.setAllowedMethods(methods);
         configuration.setAllowedHeaders(headers);
         configuration.setAllowCredentials(false);
