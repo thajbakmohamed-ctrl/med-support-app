@@ -338,6 +338,11 @@ MAIL_PASSWORD=your_email_app_password
 JWT_SECRET=your_jwt_secret
 ```
 
+### 4. Start the Application
+
+From the repository root, run `.\mvnw.cmd spring-boot:run` on Windows or
+`./mvnw spring-boot:run` on macOS or Linux.
+
 
 ```text
 http://localhost:8080
@@ -1128,3 +1133,269 @@ Reference for real-time messaging and notifications.
 
 
 
+
+
+# Project 4 — Microservices and Event-Driven Notifications
+
+Project 4 continues the Project 2/3 blood-donation application with four Java 17 /
+Spring Boot 4 services, Docker Compose, PostgreSQL 17 and Kafka. The four services expose separate REST APIs and share a PostgreSQL schema.
+
+## Architecture and data
+
+```mermaid
+flowchart LR
+    UI[Frontend :5500] --> I[Identity :8083]
+    UI --> B[Booking :8084]
+    UI --> H[Blood Request :8085]
+    UI --> N[Notification :8086]
+    B -->|REST identity checks| I
+    H -->|REST identity checks| I
+    N -->|REST identity checks| I
+    B -->|transactional outbox| K[Kafka booking-events]
+    K --> N
+    N --> M[Mailpit; Gmail opt-in]
+    I --> DB[(Shared Project 4 PostgreSQL)]
+    B --> DB
+    H --> DB
+    N --> DB
+```
+
+| Service | Responsibility and primary tables |
+|---|---|
+| Identity | JWT, accounts, verification/reset, profiles, staff assignment; `users`, `donor_profile` |
+| Booking | Appointments, slots, capacity, completion, reminders, outbox; `donation_booking`, `donation_slot`, `booking_outbox_events`, `p4_donation_reminder` |
+| Blood Request | Hospitals, departments and request management; `hospital`, `blood_request`, `p4_hospital_department` |
+| Notification | Own inbox, user-specific WebSocket, email retries; `p4_notifications` |
+
+The database remains shared (`public` schema). Booking currently locks/updates
+`blood_request`; Blood Request checks bookings before deletion; Identity checks
+hospital existence for assignment. Three services write `system_audit_logs`.
+These explicit couplings retain current atomicity; full database ownership
+isolation and independently evolvable schemas are not claimed.
+
+```mermaid
+erDiagram
+    hospital ||--o{ users : assigns
+    users ||--o| donor_profile : has
+    hospital ||--o{ blood_request : requests
+    hospital ||--o{ donation_slot : schedules
+    hospital ||--o{ p4_hospital_department : contains
+    donor_profile ||--o{ donation_booking : makes
+    blood_request ||--o{ donation_booking : receives
+    donation_slot ||--o{ donation_booking : reserves
+    donation_booking ||--o{ booking_outbox_events : emits
+    donation_booking ||--o| p4_donation_reminder : queues_once
+    donation_booking ||..o{ p4_notifications : logical_reference
+    system_audit_logs {
+        bigint audit_log_id PK
+    }
+```
+
+## Security
+
+Identity issues bearer JWTs and manages verification, password recovery and account status. Internal REST calls use dedicated service keys. Donors manage their own profiles and bookings, and staff operations are scoped to their assigned active hospital. Administrators manage hospitals, staff and account activation. Activated accounts still require email verification, and administrator accounts are protected from deactivation. The inbox derives its recipient from the authenticated identity. WebSocket authentication happens in the first frame and Identity revalidates the active, verified account before each snapshot. Sign-out clears browser session data and closes the socket. Use HTTPS and WSS for hosted access.
+
+## Docker setup
+
+From the repository root, use Docker Compose v2 and the dedicated Project 4 Compose file. For a new setup, copy [the environment example](runtime/project4/.env.example) to `runtime/project4/.env`. Set `P4_DB_PASSWORD`, `P4_JWT_SECRET`, `P4_IDENTITY_SERVICE_KEY` and `P4_NOTIFICATION_SERVICE_KEY`. Use at least 32 bytes for the JWT secret and 32 characters for each service key. Administrator bootstrap is disabled by default. The example lists its optional settings. Keep credentials out of Git, browser configuration and logs.
+
+```powershell
+docker compose --env-file runtime/project4/.env -f docker-compose.project4.yml up -d p4-postgres p4-kafka p4-kafka-init p4-mailpit
+```
+
+The dedicated PostgreSQL 17 instance listens on `127.0.0.1:5434` from the host, with database `med_support` and user `medsupport_p4`. Its volume is `med-support-p4-local-postgres17-v1`, and its network is `med-support-p4-local-network-v1`. Kafka 3.9.1 uses `p4-kafka:19092` inside Compose and `localhost:19092` from the host. Its init container creates `booking-events` and `booking-events-dlt`. Mailpit captures local SMTP and serves the inbox at <http://localhost:8025>. [Gmail SMTP](runtime/project4/GMAIL.md) is opt-in. Use Mailpit for testing.
+
+The services validate the schema at startup. On an empty dedicated local database, apply the four [shared schema scripts](booking-service/src/main/resources/db/manual/shared) in S001–S004 order, followed by [Notification V001](notification-service/src/main/resources/db/manual/V001__notification_service_schema.sql) and [S005](runtime/project4/S005__core_features.sql). Verify the endpoint and migration history before applying scripts with `psql` and `ON_ERROR_STOP=1`. For an existing database, use the manual upgrade procedure below.
+
+The local Compose configuration sets all four datasources to
+`jdbc:postgresql://p4-postgres:5432/med_support`. Confirm this setting in your
+checkout before starting the applications. Earlier revisions may point to RDS. For an existing
+local database, the credentials in `runtime/project4/.env` must match the
+current database role. Once the schema is ready and PostgreSQL, Kafka and
+Mailpit are healthy, start the services and frontend:
+
+```powershell
+docker compose --env-file runtime/project4/.env -f docker-compose.project4.yml --profile runtime up -d --build --no-deps identity-service blood-request-service booking-service notification-service p4-frontend
+```
+
+## Frontend and features
+
+Nginx serves the [HTML, CSS and JavaScript frontend](project4-frontend/README.md) at <http://localhost:5500>. API URLs are public settings in `project4-frontend/config.js`. Local CORS and WebSocket checks expect exactly `http://localhost:5500`. Appointment times use the server’s UTC configuration.
+
+- **Donors** can register and verify through email, recover or change passwords, upload CPR and profile photos, complete donor onboarding, filter blood requests and book or cancel appointments.
+- **Hospital staff** can add departments, manage requests and slots, and review, confirm or complete appointments for their hospital. Completing donations updates the request and can close it once its required units are met.
+- **Administrators** can create and activate hospitals, register and assign staff, search users with pagination, and deactivate or reactivate eligible accounts.
+- **Notifications** appear in the paginated inbox at `/api/notifications/my`. The live inbox at `/ws/notifications` refreshes from persisted data on reconnect. REST remains available during socket interruptions. Booking checks every minute for pending or confirmed appointments within 24 hours and queues one reminder per booking.
+- **Request sharing** uses a public read-only `?request=ID` page backed by `GET /api/blood-requests/shared/{id}`. Unavailable requests cannot be opened. Copy link, WhatsApp, and native sharing where supported use the current frontend origin. Signing in returns the donor to the request. Booking requires an eligible donor. External shares require a publicly reachable frontend and API and the deployed origin allowed by CORS.
+- **Hospital directions** open Google Maps in a new tab. Recognized Salmaniya and Bahrain Defence Force hospital aliases use curated destinations. Other hospitals can use their supplied location. A hospital with neither has no directions link.
+
+### Request creation, capacity and rescheduling
+
+Verified staff assigned to an active hospital can create a request using
+`POST /api/blood-requests` with a bearer token. The body includes the assigned
+`hospitalId`, `requiredBloodType`, `requiredBloodUnits` (at least one),
+`bloodRequestUrgency`, and `bloodNeededDate` (today or later).
+`bloodRequestDescription` is optional. Success returns `201 Created`.
+
+Two eligible donors can book the same slot when two places remain. If they
+race for the last place, one succeeds and the other receives `409 Conflict`.
+Transactional database row locks serialize capacity changes across Booking
+instances. A database constraint keeps the reserved count between zero and
+capacity. Booking, capacity, audit and outbox changes commit together.
+Duplicate prevention applies to the same donor at the same date and time.
+
+In **My Donations**, donors can reschedule their own upcoming `PENDING` or
+`CONFIRMED` booking before a reminder is queued. The frontend sends
+`PUT /api/donation-bookings/{bookingId}/reschedule` with the booking request body,
+the same blood request, and a different slot. The replacement appointment must
+be in the future, at the same hospital, within the open request's deadline,
+and in an open slot with capacity. Success preserves
+the booking ID, transfers capacity atomically, resets the status to `PENDING`
+for staff confirmation, and queues `BOOKING_RESCHEDULED`. A rejected move
+preserves the original reservation.
+
+
+
+## APIs, caching and monitoring
+
+Each service serves `/v3/api-docs` and `/swagger-ui/index.html` on its own port.
+Swagger declares bearer JWT and internal service-key authentication. Do not use
+Try It Out to send production emails or mutate existing data during verification.
+Kafka/WebSocket details are separate from REST docs.
+
+Blood Request caches only hospital list/detail DTOs in local Caffeine caches:
+maximum 200 entries, 60-second expiry, eviction after hospital mutations.
+`HOSPITAL_CACHE_SPEC` can override the bounded policy. Multiple instances can
+retain reference data until expiry. Authentication, slots, capacity and request
+eligibility are never decided from this cache.
+
+All four services expose `/actuator/health`, `/actuator/health/liveness` and
+`/actuator/health/readiness` without internal details. Only health is publicly
+exposed; env/config endpoints are not exposed. Mail health checks are disabled,
+so inspection never attempts Gmail. Readiness reflects Spring readiness state;
+use overall health for the configured dependency checks, and workflow checks for
+business readiness. Existing Compose TCP checks remain local process checks.
+Use `docker compose ... logs --tail 100 SERVICE` for failures; booking event IDs,
+notification IDs, retries and outbox activity are logged. Never enable SMTP debug
+or paste secrets/container environments into reports.
+
+## Kafka and reliability
+
+Booking writes the notification outbox in the same transaction as booking,
+capacity and audit changes. The publisher sends to `booking-events`, keyed by
+booking ID. Payload fields: `eventId, bookingId, recipientEmail, notificationType,
+title, message`. Notification deduplicates event IDs, persists before email work,
+and retries SMTP up to three attempts. Invalid events use `booking-events-dlt`.
+Delivery is at least once, not exactly-once SMTP. Recovery is disabled by default;
+review its existing settings/runbook before enabling it.
+
+Reminder receipt and outbox insertion share one transaction. The receipt's booking
+primary key prevents duplicate queueing. Already queued reminders cannot be
+recalled after cancellation. The inbox always derives the recipient from Identity;
+the WebSocket authenticates in its first frame and sends only that user's inbox.
+See [frontend workflows](project4-frontend/README.md) and
+[HTTP/event contracts](runtime/project4/integration-tests/CONTRACTS.md).
+
+## Tests and CI
+
+```powershell
+# Existing lightweight unit tests (no default-config application smoke contexts):
+mvn -f identity-service/pom.xml '-Dtest=*Test' test
+mvn -f booking-service/pom.xml '-Dtest=*Test' test
+mvn -f blood-request-service/pom.xml '-Dtest=*Test' test
+mvn -f notification-service/pom.xml '-Dtest=*Test' test
+# Existing contracts plus three Cucumber scenarios; no external infrastructure:
+mvn -f runtime/project4/integration-tests/pom.xml test
+# Optional existing disposable PostgreSQL/Kafka concurrency gate:
+mvn -f runtime/project4/integration-tests/pom.xml -Pintegration test
+```
+
+`runtime/project4/integration-tests/Run-Baseline.ps1` wraps these commands and checks Docker before
+`-Integration`. It accepts `-Maven` for a cached Maven executable. This is the only
+integration harness. It uses no existing database, Compose volumes, env files or
+Gmail. PostgreSQL refuses host port 5434; containers have allocated ports and no
+reuse. The original five migrations run only inside its disposable fixture.
+
+Retained tests cover last-slot races across two Booking contexts, terminal-status
+races, closure/deletion races, atomic completion and rollback. Seven standalone
+MVC checks protect booking/slot contracts. The existing event-contract class now
+also holds three Cucumber scenarios: valid event processing, invalid event
+rejection and unauthorized booking history. Persistence/Identity are mocked in
+these lightweight scenarios; the existing Kafka test covers real transport.
+No new JUnit suite or Testcontainers infrastructure was added.
+
+`.github/workflows/project4.yml` checks frontend syntax, runs BDD/contracts and the
+existing disposable concurrency gate, tests/packages four services, and builds
+four Docker images. Push events publish commit-SHA tags to GHCR using the built-in
+GitHub token. PRs build without publishing. See the deployment handoff below for release and rollout status.
+
+## Manual activation and frontend acceptance
+
+The existing five migrations must not be rerun. S005 is a forward-only MANUAL
+upgrade and adds hospital departments and donation reminder receipts. Before activation, verify the host
+port/database and compare migration records and the definitions of
+`p4_hospital_department` and `p4_donation_reminder` against S005. Apply S005
+only if confirmed missing, after taking a recoverable backup. With PostgreSQL client
+tools installed, these commands prompt privately for the dedicated DB password:
+
+```powershell
+$backupPath = Join-Path $env:TEMP 'project4-before-S005.dump'
+pg_dump --host=127.0.0.1 --port=5434 --username=medsupport_p4 --dbname=med_support --password --format=custom --file=$backupPath
+psql --host=127.0.0.1 --port=5434 --username=medsupport_p4 --dbname=med_support --password --set=ON_ERROR_STOP=1 --file=runtime/project4/S005__core_features.sql
+```
+
+Once the schema is verified, launch the services with the local Compose command above.
+
+1. Check each service's health and Swagger URL; open http://localhost:5500.
+2. Admin: create/activate a synthetic hospital; register staff, search users,
+   assign that staff user to the hospital. Verify email through Mailpit. Check
+   deactivate/reactivate on a synthetic donor/staff account and denied donor access
+   to admin APIs. Administrator deactivation is protected.
+3. Staff: sign in, create a department, request and future slot; review only their
+   own hospital's bookings and confirm/complete one. Check automatic request
+   completion when the required units are reached.
+4. Donor: register/verify through Mailpit, upload a synthetic CPR file, create a
+   donor profile, filter requests, select a slot, book and cancel an appointment.
+   Check profile/password controls and Departments browsing. Open a shared request
+   while signed out, then sign in and confirm the return to that request. Check
+   maps for both a recognized hospital and a hospital with a supplied location.
+5. Use a synthetic appointment less than 24 hours away; wait for the reminder
+   poll. Verify its inbox/Mailpit notification appears once. Keep donor and staff
+   sessions in separate browser profiles. Change status as staff and confirm the
+   donor's Notifications screen updates through WebSocket. Verify another account
+   cannot retrieve that inbox, and logout closes the socket.
+
+6. With two eligible donors, confirm both can book a slot with two places.
+   Race for a last place and confirm one success and one conflict. Reschedule
+   an upcoming booking before the reminder is queued. Check that it keeps its ID,
+   returns to `PENDING`, and retains its original reservation if another move fails.
+
+Use synthetic records and Mailpit for these manual checks. Local inspection
+verified PostgreSQL TCP authentication with the rendered application datasource
+credentials and read-only access to 11 tables in `public`, including both S005
+tables. PostgreSQL, Kafka, Mailpit and the frontend reported healthy. Full browser
+acceptance and cache behavior across instances remain unverified by that check.
+
+## Submission status and references
+
+Keep the existing user stories/planning board current with migration, acceptance,
+registry and AWS deployment evidence. Present the four service responsibilities,
+transactional concurrency fix, Kafka flow, Cucumber scenarios, cache and pipeline.
+Do not claim AWS deployment, strict database isolation or a production security
+review before they are actually demonstrated.
+
+References used: [Springdoc](https://springdoc.org/) for Boot 4/OpenAPI support;
+[Cucumber JVM](https://cucumber.io/docs/installation/java/) for executable Gherkin;
+[Spring Cache](https://docs.spring.io/spring-framework/reference/integration/cache.html)
+for caching; [GitHub Actions](https://docs.github.com/actions) for CI/image workflow;
+[PostgreSQL locking](https://www.postgresql.org/docs/current/explicit-locking.html)
+for transaction/lock behavior. AI coding assistance was used for implementation,
+cleanup and test preparation; the author must review and explain the submitted code.
+
+## Deployment
+
+The AWS deployment handoff covers the Java 17 Elastic Beanstalk bundle, four service JARs, co-hosted Kafka, reverse proxy and Jenkins release workflow. Consult the [deployment handoff](deployment/project4/TONIGHT_DEPLOYMENT.md) and [recovery runbook](deployment/project4/RECOVERY.md) for the recorded rollout status and recovery steps.
+
+- **GitHub Actions** defines checks and commit-SHA image publication to GHCR. A hosted run and publication for this submission revision remain unverified.
+- **Jenkins** verified an earlier release ZIP, according to the handoff. The newer low-memory ZIP was packaged separately and its Jenkins verification remains pending.
+- **AWS** rollout and hosted acceptance remain unverified. The handoff records a host-access blocker, and the newer bundle's 2 GiB capacity remains unverified.

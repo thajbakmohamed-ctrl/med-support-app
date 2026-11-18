@@ -15,6 +15,10 @@ internal service keys belong in browser files.
 
 - Donor registration, verification, login, password recovery/change, profile,
   CPR/photo upload, donor onboarding, request filtering, slot booking and cancellation.
+  **My Donations** also offers rescheduling for upcoming pending or confirmed
+  bookings. The server rejects moves after a reminder is queued. A successful
+  move retains the booking ID and requires staff confirmation again. A failed
+  move leaves the original reservation in place.
 - Staff request creation/status changes, slots and booking review/status updates.
 - Admin hospital/staff management, paginated user search, account activation and
   deactivation/reactivation. Activation does not bypass email verification.
@@ -34,9 +38,9 @@ internal service keys belong in browser files.
 ## Required forward migration
 
 `runtime/project4/S005__core_features.sql` adds only `p4_hospital_department` and
-`p4_donation_reminder`. It has NOT been applied. Arrange a separate, verified
-manual Project 4 upgrade before running the new department/reminder code. Do not
-rerun the five existing migrations. No startup migration runner was added.
+`p4_donation_reminder`. Before running the department and reminder workflows,
+check the target database schema and migration history. Apply S005 manually
+only where it is missing. Preserve the existing migration history.
 
 Reminder receipt and outbox insertion share a transaction; the booking primary
 key prevents duplicate queuing across scheduler instances/restarts. Already
@@ -68,7 +72,8 @@ For optional Gmail configuration see [Gmail instructions](../runtime/project4/GM
 Mailpit remains the default; real SMTP was not used for testing.
 
 Sharing an available request produces a current-origin `?request=ID` link. It opens
-a public, read-only page with hospital, blood type, units, urgency, date and status;
+a public, read-only page backed by `GET /api/blood-requests/shared/{id}` with
+hospital, blood type, units, urgency, date and status;
 closed/deleted requests are unavailable. Sign-in/registration keeps the request in
 the URL and returns to it after login. Booking still requires an eligible donor.
 Copy link, WhatsApp and (where supported) native sharing are available. Clipboard
@@ -82,7 +87,9 @@ Hospital directions use exact normalized names, not partial matching. Salmaniya
 Medical Complex uses its Google Maps address (6H8C+JVW, Road No 2904, Manama).
 Bahrain Defence Force Hospital / BDF Hospital uses Wadi Al Sail, West Riffa;
 the generic Military Hospital alias additionally requires that exact Bahrain location.
-Unknown names intentionally have no directions button. These links open Google Maps
-in a new tab without an API key or database updates. Sources:
+Other hospital names use the supplied location when present. A hospital with
+neither a curated destination nor a supplied location has no directions button.
+These links open Google Maps in a new tab without an API key or database updates.
+Sources:
 [Salmaniya Maps listing](https://www.top-rated.online/cities/Manama/place/p/5076416/Salmaniya%2BMedical%2BComplex),
 [BDF official contact and Google map](https://rms.bh/en/contact-us/).

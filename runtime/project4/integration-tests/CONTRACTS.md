@@ -1,6 +1,6 @@
 # Project 4 Batch 1 frozen baseline
 
-This records CURRENT behavior, not the proposed ownership architecture. Changes
+This records the Batch 1 behavior and the later rescheduling endpoint. Changes
 to this baseline require deliberate contract review. Production source, applied
 migrations, Compose and Project 3 are not changed by this module.
 
@@ -14,6 +14,7 @@ Spring Security filter chain.
 | Method | Path | Request | Success |
 |---|---|---|---|
 | POST | `/api/donation-bookings` | JSON below | 201 Booking |
+| PUT | `/api/donation-bookings/{id}/reschedule` | Booking JSON below with the same blood request and a different slot; owning donor | 200 Booking |
 | GET | `/api/donation-bookings/my` | Donor token | 200 Booking[] |
 | DELETE | `/api/donation-bookings/{id}` | Donor token | 200 Booking (not 204) |
 | PUT | `/api/donation-bookings/{id}/status` | `status` query parameter; staff | 200 Booking |
@@ -42,6 +43,13 @@ Validation returns 400; missing authentication 401; wrong ownership 403; missing
 resources 404; capacity, duplicate and invalid-transition conflicts 409. Booking
 exception JSON uses `status` and `message`. Exact messages are not frozen unless
 tested. Some downstream clients currently map 403 to 401: no normalization here.
+
+Rescheduling is allowed for an upcoming `PENDING` or `CONFIRMED` booking before
+its reminder is queued. The destination must be a future, open slot at the same
+hospital, within the request deadline, with capacity. The move preserves the
+booking ID, transfers the reservation atomically, resets status to `PENDING`,
+and queues `BOOKING_RESCHEDULED`. A full destination returns 409 and preserves
+the original booking and reservation.
 
 Frontend support is narrower than backend support: capacity updates are not yet
 frontend-routed/CORS-enabled. No close-slot endpoint exists. `newStatus` and the
@@ -92,7 +100,7 @@ per booking mutation, persisted in the same database transaction via outbox.
 Exact fields: `eventId,bookingId,recipientEmail,notificationType,title,message`.
 Event ID is UUID; booking ID positive; text fields nonblank. Supported producer
 types: `BOOKING_CREATED`, `BOOKING_CONFIRMED`, `BOOKING_CANCELLED`,
-`BOOKING_COMPLETED`. The core-feature reminder also publishes `APPOINTMENT_REMINDER`
+`BOOKING_COMPLETED`, `BOOKING_RESCHEDULED`. The reminder also publishes `APPOINTMENT_REMINDER`
 using the same JSON fields. Consumer uses its own record class, not the producer's Java
 package name. Type headers may be present; consumer configuration ignores them.
 Notification persistence deduplicates event IDs. Transport is at least once;
