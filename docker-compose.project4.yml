@@ -1,0 +1,229 @@
+name: med-support-p4-local
+
+x-app-environment: &app-environment
+  SPRING_DATASOURCE_URL: jdbc:postgresql://p4-postgres:5432/med_support
+  SPRING_DATASOURCE_USERNAME: medsupport_p4
+  SPRING_DATASOURCE_PASSWORD: ${P4_DB_PASSWORD:?Set P4_DB_PASSWORD in the dedicated Project 4 env file}
+  DB_PASSWORD: ${P4_DB_PASSWORD:?Set P4_DB_PASSWORD}
+  SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+  SPRING_SQL_INIT_MODE: never
+  SPRING_JPA_SHOW_SQL: "false"
+  # JSON preserves Hibernate's exact underscore-bearing vendor property name.
+  SPRING_APPLICATION_JSON: '{"spring.jpa.properties.hibernate.jdbc.time_zone":"UTC"}'
+  TZ: UTC
+  JAVA_TOOL_OPTIONS: -Duser.timezone=UTC
+  JWT_SECRET: ${P4_JWT_SECRET:?Set a fresh P4_JWT_SECRET of at least 32 bytes}
+  IDENTITY_SERVICE_KEY: ${P4_IDENTITY_SERVICE_KEY:?Set a fresh P4_IDENTITY_SERVICE_KEY of at least 32 characters}
+  NOTIFICATION_SERVICE_KEY: ${P4_NOTIFICATION_SERVICE_KEY:?Set a fresh P4_NOTIFICATION_SERVICE_KEY of at least 32 characters}
+  SERVICES_IDENTITY_URL: http://identity-service:8083
+  IDENTITY_SERVICE_URL: http://identity-service:8083
+  SERVICES_BLOOD_REQUEST_URL: http://blood-request-service:8085
+  BLOOD_REQUEST_SERVICE_URL: http://blood-request-service:8085
+  SERVICES_BOOKING_URL: http://booking-service:8084
+  SERVICES_NOTIFICATION_URL: http://notification-service:8086
+  KAFKA_BOOTSTRAP_SERVERS: p4-kafka:19092
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: p4-kafka:19092
+  MAIL_HOST: p4-mailpit
+  MAIL_PORT: "1025"
+  MAIL_USERNAME: ""
+  MAIL_PASSWORD: ""
+  SPRING_MAIL_HOST: p4-mailpit
+  SPRING_MAIL_PORT: "1025"
+  SPRING_MAIL_USERNAME: ""
+  SPRING_MAIL_PASSWORD: ""
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "false"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: "false"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_FROM: no-reply@med-support.test
+
+x-app: &app
+  profiles: [runtime]
+  networks: [p4-network]
+  restart: "no"
+
+services:
+  p4-postgres:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: med_support
+      POSTGRES_USER: medsupport_p4
+      POSTGRES_PASSWORD: ${P4_DB_PASSWORD:?Set P4_DB_PASSWORD}
+      TZ: UTC
+    ports: ["127.0.0.1:5434:5432"]
+    volumes: [p4-postgres-data:/var/lib/postgresql/data]
+    networks: [p4-network]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: "no"
+
+  p4-kafka:
+    image: apache/kafka:3.9.1
+    hostname: p4-kafka
+    environment:
+      KAFKA_NODE_ID: "1"
+      KAFKA_PROCESS_ROLES: broker,controller
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_LISTENERS: INTERNAL://:19092,EXTERNAL://:9092,CONTROLLER://:29093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://p4-kafka:19092,EXTERNAL://localhost:19092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@p4-kafka:29093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "0"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    ports: ["127.0.0.1:19092:9092"]
+    volumes: [p4-kafka-data:/var/lib/kafka/data]
+    networks: [p4-network]
+    healthcheck:
+      # The probe launches a separate JVM; do not inherit a broker-sized heap.
+      test: [CMD-SHELL, "KAFKA_HEAP_OPTS='-Xms16m -Xmx64m' /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --list"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 20s
+    restart: "no"
+
+  p4-kafka-init:
+    image: apache/kafka:3.9.1
+    depends_on:
+      p4-kafka: {condition: service_healthy}
+    entrypoint: [/bin/bash, -ec]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --create --if-not-exists --topic booking-events --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --create --if-not-exists --topic booking-events-dlt --partitions 1 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --describe --topic booking-events
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server p4-kafka:19092 --describe --topic booking-events-dlt
+    networks: [p4-network]
+    restart: "no"
+
+  p4-mailpit:
+    image: axllent/mailpit:v1.27.8
+    environment:
+      MP_DATABASE: /data/mailpit.db
+      MP_MAX_MESSAGES: "500"
+      MP_DISABLE_VERSION_CHECK: "true"
+    ports: ["127.0.0.1:8025:8025", "127.0.0.1:1025:1025"]
+    volumes: [p4-mailpit-data:/data]
+    networks: [p4-network]
+    healthcheck:
+      test: [CMD, /mailpit, readyz]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: "no"
+
+  identity-service:
+    <<: *app
+    build: {context: ./identity-service}
+    environment:
+      <<: *app-environment
+      APP_BASE_URL: http://localhost:8083
+      APP_UPLOAD_DIR: /app/uploads
+      APP_ADMIN_SEED_ENABLED: ${P4_ADMIN_SEED_ENABLED:-false}
+      ADMIN_EMAIL: ${P4_ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${P4_ADMIN_PASSWORD:-}
+      ADMIN_PHONE: ${P4_ADMIN_PHONE:-}
+    ports: ["127.0.0.1:8083:8083"]
+    volumes: [p4-identity-uploads:/app/uploads]
+    depends_on:
+      p4-postgres: {condition: service_healthy}
+      p4-mailpit: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, /bin/bash, -ec, "exec 3<>/dev/tcp/127.0.0.1/8083"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 60s
+
+  blood-request-service:
+    <<: *app
+    build: {context: ./blood-request-service}
+    environment: *app-environment
+    ports: ["127.0.0.1:8085:8085"]
+    depends_on:
+      p4-postgres: {condition: service_healthy}
+      identity-service: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, /bin/bash, -ec, "exec 3<>/dev/tcp/127.0.0.1/8085"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 60s
+
+  notification-service:
+    <<: *app
+    build: {context: ./notification-service}
+    environment:
+      <<: *app-environment
+      APP_NOTIFICATION_RECOVERY_ENABLED: "false"
+    ports: ["127.0.0.1:8086:8086"]
+    depends_on:
+      p4-postgres: {condition: service_healthy}
+      p4-mailpit: {condition: service_healthy}
+      p4-kafka-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, /bin/bash, -ec, "exec 3<>/dev/tcp/127.0.0.1/8086"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 60s
+
+  booking-service:
+    <<: *app
+    build: {context: ./booking-service}
+    environment: *app-environment
+    ports: ["127.0.0.1:8084:8084"]
+    depends_on:
+      p4-postgres: {condition: service_healthy}
+      identity-service: {condition: service_healthy}
+      blood-request-service: {condition: service_healthy}
+      notification-service: {condition: service_healthy}
+      p4-kafka-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, /bin/bash, -ec, "exec 3<>/dev/tcp/127.0.0.1/8084"]
+      interval: 10s
+      timeout: 3s
+      retries: 18
+      start_period: 60s
+
+  p4-frontend:
+    profiles: [runtime]
+    image: nginx:1.28.0-alpine
+    ports: ["127.0.0.1:5500:80"]
+    volumes: [./project4-frontend:/usr/share/nginx/html:ro]
+    networks: [p4-network]
+    depends_on:
+      identity-service: {condition: service_healthy}
+      blood-request-service: {condition: service_healthy}
+      booking-service: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1/index.html"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+
+networks:
+  p4-network:
+    name: med-support-p4-local-network-v1
+
+# Never mark these external or substitute a root Compose / Project 3 volume.
+volumes:
+  p4-postgres-data:
+    name: med-support-p4-local-postgres17-v1
+    labels: {com.medsupport.environment: project4-isolated-local}
+  p4-kafka-data:
+    name: med-support-p4-local-kafka-v1
+  p4-mailpit-data:
+    name: med-support-p4-local-mailpit-v1
+  p4-identity-uploads:
+    name: med-support-p4-local-identity-uploads-v1

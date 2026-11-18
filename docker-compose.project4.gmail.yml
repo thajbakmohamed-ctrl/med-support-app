@@ -1,0 +1,35 @@
+# Explicit opt-in only: layer after docker-compose.project4.yml.
+# Do not rename this file to compose.override.yml. No credentials belong here.
+x-gmail-environment: &gmail-environment
+  MAIL_HOST: smtp.gmail.com
+  MAIL_PORT: "587"
+  MAIL_USERNAME: ${P4_GMAIL_USERNAME:?Set P4_GMAIL_USERNAME only for the Gmail override}
+  MAIL_PASSWORD: ${P4_GMAIL_APP_PASSWORD:?Set P4_GMAIL_APP_PASSWORD only for the Gmail override}
+  SPRING_MAIL_HOST: smtp.gmail.com
+  SPRING_MAIL_PORT: "587"
+  SPRING_MAIL_USERNAME: ${P4_GMAIL_USERNAME:?Set P4_GMAIL_USERNAME}
+  SPRING_MAIL_PASSWORD: ${P4_GMAIL_APP_PASSWORD:?Set P4_GMAIL_APP_PASSWORD}
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "true"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "true"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED: "true"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE: "false"
+  SPRING_MAIL_PROPERTIES_MAIL_SMTP_FROM: ${P4_GMAIL_USERNAME:?Set P4_GMAIL_USERNAME}
+  # Exact JavaMail map keys; retain the base Hibernate setting because JSON replaces it.
+  # mail.from supplies the header when SimpleMailMessage has no explicit From.
+  # mail.smtp.from supplies the SMTP envelope sender.
+  SPRING_APPLICATION_JSON: >-
+    {"spring.jpa.properties.hibernate.jdbc.time_zone":"UTC",
+    "spring.mail.properties.mail.from":"${P4_GMAIL_USERNAME:?Set P4_GMAIL_USERNAME}",
+    "spring.mail.properties.mail.smtp.from":"${P4_GMAIL_USERNAME:?Set P4_GMAIL_USERNAME}",
+    "spring.mail.properties.mail.smtp.auth":"true",
+    "spring.mail.properties.mail.smtp.starttls.enable":"true",
+    "spring.mail.properties.mail.smtp.starttls.required":"true",
+    "spring.mail.properties.mail.smtp.ssl.enable":"false",
+    "spring.mail.properties.mail.smtp.ssl.checkserveridentity":"true",
+    "spring.mail.properties.mail.debug":"false"}
+
+services:
+  identity-service:
+    environment: *gmail-environment
+  notification-service:
+    environment: *gmail-environment

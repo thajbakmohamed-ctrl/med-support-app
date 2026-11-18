@@ -1,0 +1,51 @@
+
+services:
+  api_service:
+    build: .
+    container_name: med-support-api
+    ports:
+      - "8081:8081"
+    volumes:
+      - med-support-uploads:/app/uploads
+    environment:
+      SERVER_PORT: 8081
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_db:5432/med_support_docker
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    networks:
+      - med-support-network
+
+  postgres_db:
+    image: postgres:17
+    container_name: med-support-postgres
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_DB: med_support_docker
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d med_support_docker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - med-support-postgres-data:/var/lib/postgresql/data
+    networks:
+      - med-support-network
+
+networks:
+  med-support-network:
+    driver: bridge
+
+volumes:
+  med-support-postgres-data:
+  med-support-uploads:
+
+  

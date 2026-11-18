@@ -1,0 +1,13 @@
+proxy_http_version 1.1;
+proxy_set_header Host $http_host;
+proxy_set_header Origin $http_origin;
+proxy_set_header Forwarded "";
+proxy_set_header X-Forwarded-Prefix "";
+proxy_set_header X-Forwarded-Host $http_host;
+proxy_set_header X-Forwarded-Proto $p4_scheme;
+proxy_set_header X-Forwarded-Port $p4_port;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+proxy_set_header Upgrade $http_upgrade;
+proxy_set_header Connection $p4_connection;
+proxy_read_timeout 300s;
+proxy_send_timeout 300s;

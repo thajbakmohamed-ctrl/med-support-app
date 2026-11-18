@@ -1,0 +1,96 @@
+name: Project 4 checks and images
+on:
+  push:
+    branches: [main, feature/project4-microservices]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Frontend syntax
+        run: |
+          node --check project4-frontend/app.js
+          node --check project4-frontend/config.js
+      - name: BDD, contracts and disposable concurrency checks
+        run: mvn -B -f runtime/project4/integration-tests/pom.xml -Pintegration test
+  services:
+    needs: baseline
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [identity-service, booking-service, blood-request-service, notification-service]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+      - name: Unit tests and package
+        run: mvn -B -f ${{ matrix.service }}/pom.xml '-Dtest=*Test' verify
+      - name: Preserve executable Java 17 JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: p4-${{ matrix.service }}-jar
+          path: ${{ matrix.service }}/target/${{ matrix.service }}-0.0.1-SNAPSHOT.jar
+          if-no-files-found: error
+          retention-days: 7
+      - name: Image name
+        id: image
+        shell: bash
+        run: echo "name=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.service }}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        if: github.event_name == 'push'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.service }}
+          push: ${{ github.event_name == 'push' }}
+          tags: ${{ steps.image.outputs.name }}:${{ github.sha }}
+  deployment-bundle:
+    needs: services
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: p4-*-jar
+          merge-multiple: true
+          path: .artifacts
+      - name: Stage existing executable JARs and official public RDS CA
+        shell: bash
+        run: |
+          for service in identity-service booking-service blood-request-service notification-service; do
+            mkdir -p "$service/target"
+            cp ".artifacts/$service-0.0.1-SNAPSHOT.jar" "$service/target/"
+          done
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem \
+            --output "$RUNNER_TEMP/global-bundle.pem"
+      - name: Package one Java SE deployment ZIP
+        id: bundle
+        shell: pwsh
+        run: |
+          $zip = & ./deployment/project4/Package-SingleJava.ps1 -RdsCaBundle "$env:RUNNER_TEMP/global-bundle.pem"
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project4-java17-eb-${{ github.sha }}
+          path: ${{ steps.bundle.outputs.zip }}
+          if-no-files-found: error
+          retention-days: 7

@@ -1,0 +1,5 @@
+web: bash scripts/start-service.sh identity-service 8083
+kafka: bash scripts/start-kafka.sh
+booking: bash scripts/start-service.sh booking-service 8084
+blood: bash scripts/start-service.sh blood-request-service 8085
+notification: bash scripts/start-service.sh notification-service 8086
