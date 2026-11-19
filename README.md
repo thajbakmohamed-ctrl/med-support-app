@@ -1173,6 +1173,19 @@ hospital existence for assignment. Three services write `system_audit_logs`.
 These explicit couplings retain current atomicity; full database ownership
 isolation and independently evolvable schemas are not claimed.
 
+### Database design and ERD
+
+![Med Support Project 4 ERD](docs/healthcare-support-erd%20%283%29.png)
+
+Project 4 uses a shared PostgreSQL database across four Spring Boot
+microservices (Identity, Booking, Blood Request, and Notification). The shared
+schema contains 11 tables. The `donation_booking` table connects each booking
+to a donor profile, a blood request, and a donation slot.
+
+- `booking_outbox_events` stores events in the booking transaction for later publication to Kafka.
+- `p4_notifications` stores notifications for the donor's inbox and tracks email delivery.
+- `p4_donation_reminder` records when a reminder is queued and prevents duplicate queueing for the same booking.
+
 ```mermaid
 erDiagram
     hospital ||--o{ users : assigns
